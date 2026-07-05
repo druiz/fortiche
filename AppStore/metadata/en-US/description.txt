@@ -1,0 +1,31 @@
+Paste any workout program — Fortiche turns it into a plan you can train with.
+
+Copy a program from your coach, a forum, a PDF, or your notes, paste it into Fortiche, and on-device Apple Intelligence turns it into a structured, trackable plan: days, exercises, sets, reps, weights, rest times. "Bench 3x5 @ 80kg", "OHP 3×8–12", "5/3/1", AMRAP, RPE, %1RM — it understands how lifters actually write programs. Nothing you paste ever leaves your device.
+
+BUILT FOR THE GYM FLOOR
+One giant button per set. Big steppers for quick weight and rep changes. No fiddly gestures, no tiny targets — it works with sweaty hands, gloves, and chalk. A rest timer starts itself when you finish a set, with haptics on your wrist and a countdown on your lock screen.
+
+YOUR WRIST OR YOUR PHONE — OR BOTH
+Train from Apple Watch with heart rate live on screen: turn the Digital Crown to adjust weight, Double Tap to log a set. Your iPhone mirrors the whole workout live — change weight, reps, or sets on whichever device is closer, and both stay in sync. No watch? The full experience works on iPhone alone.
+
+LIVE ACTIVITY THAT LIFTS WITH YOU
+Your current set, prescription, and rest countdown live in the Dynamic Island and on your Lock Screen — with buttons to log a set, skip rest, or pause without unlocking your phone.
+
+HANDS FULL? ASK SIRI.
+"Start my push day." "Log 8 reps at 80 kilos." "Skip my rest." "Next exercise." Deep App Intents integration puts your whole workout a sentence away — also via the Action button and Shortcuts.
+
+KNOW YOU'RE PROGRESSING
+Every finished workout is saved with personal records (estimated 1RM), weekly volume charts, and a "last time" reminder on every set so you always know what to beat. Workouts count toward your Activity rings via Apple Health.
+
+AND THE DETAILS THAT MATTER
+• Programs are fully editable — tweak sets by hand or re-parse from the original text
+• Your next training day is suggested automatically, based on what you did last
+• Plate calculator (kg and lb) so you never do bar math mid-set
+• A public-domain library of 870+ exercises, matched even when you write "OHP" or "RDLs"
+• Pick your app icon: five colorways
+• kg/lb, your choice
+
+PRIVATE BY ARCHITECTURE
+No account. No server. No analytics. Programs and history live on your devices and in your private iCloud; workouts save to Apple Health under your control. The AI runs entirely on-device.
+
+Fortiche requires iOS 27 and is built for Apple Intelligence. Program parsing uses the on-device model where available, with a fast built-in parser everywhere else.

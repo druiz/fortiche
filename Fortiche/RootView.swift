@@ -9,16 +9,25 @@ struct RootView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var workoutController = PhoneWorkoutController.shared
     @State private var mirror = MirroringReceiver.shared
+    // CLI automation hook: `--tab history|settings` opens on that tab
+    // (used by the App Store screenshot script).
+    @State private var selectedTab: String = {
+        let args = ProcessInfo.processInfo.arguments
+        if let index = args.firstIndex(of: "--tab"), args.indices.contains(index + 1) {
+            return args[index + 1]
+        }
+        return "programs"
+    }()
 
     var body: some View {
-        TabView {
-            Tab("Programs", systemImage: "list.bullet.rectangle") {
+        TabView(selection: $selectedTab) {
+            Tab("Programs", systemImage: "list.bullet.rectangle", value: "programs") {
                 TemplateListView()
             }
-            Tab("History", systemImage: "clock") {
+            Tab("History", systemImage: "clock", value: "history") {
                 HistoryView()
             }
-            Tab("Settings", systemImage: "gearshape") {
+            Tab("Settings", systemImage: "gearshape", value: "settings") {
                 SettingsView()
             }
         }
@@ -83,6 +92,15 @@ struct TemplateListView: View {
                 TemplateImportView()
             }
             .task { await runDemoImportIfRequested() }
+            .task(id: templates.count) {
+                // `--demo-workout` starts the first day headlessly — works
+                // with existing data too (screenshot automation).
+                if ProcessInfo.processInfo.arguments.contains("--demo-workout"),
+                   !PhoneWorkoutController.shared.isActive,
+                   let day = templates.first?.orderedDays.first {
+                    await PhoneWorkoutController.shared.start(day: day)
+                }
+            }
         }
     }
 
@@ -165,19 +183,60 @@ struct TemplateListView: View {
         let parser: any ProgramParsing = IntelligentProgramParser.availability == .available
             ? IntelligentProgramParser()
             : HeuristicProgramParser()
-        guard let program = try? await parser.parse(
-            sample, suggestedName: "Demo PPL", defaultUnit: .kilograms, onDay: { _ in }
+        guard var program = try? await parser.parse(
+            sample, suggestedName: "", defaultUnit: .kilograms, onDay: { _ in }
         ) else { return }
+        // Empty suggestion → auto-namer produces "Push/Pull/Legs".
+        program.name = ProgramNamer.suggestName(for: program.days)
         let template = program.canonicalized().makeTemplate(sourceText: sample)
         modelContext.insert(template)
         try? modelContext.save()
         pushTemplatesToWatch(modelContext)
+
+        // `--demo-history` seeds a few weeks of plausible finished workouts so
+        // History/PR screenshots have real content.
+        if ProcessInfo.processInfo.arguments.contains("--demo-history") {
+            seedDemoHistory(template: template)
+        }
 
         // `--demo-workout` additionally starts the first day (headless UI check).
         if ProcessInfo.processInfo.arguments.contains("--demo-workout"),
            let firstDay = template.orderedDays.first {
             await PhoneWorkoutController.shared.start(day: firstDay)
         }
+    }
+
+    /// Three weeks of finished sessions cycling through the template's days,
+    /// with weights creeping up — enough for charts, PRs, and ghosts.
+    private func seedDemoHistory(template: WorkoutTemplate) {
+        let days = template.orderedDays
+        guard !days.isEmpty else { return }
+        var sessionDate = Date.now.addingTimeInterval(-21 * 86400)
+        var sessionIndex = 0
+        while sessionDate < Date.now.addingTimeInterval(-86400) {
+            let day = days[sessionIndex % days.count]
+            let progression = Double(sessionIndex / days.count) * 2.5
+
+            let log = WorkoutLog(title: "\(template.name) — \(day.name)", startedAt: sessionDate, host: .phone)
+            log.templateUUID = template.uuid
+            log.dayUUID = day.uuid
+            log.endedAt = sessionDate.addingTimeInterval(TimeInterval(Int.random(in: 45...70) * 60))
+            log.exercises = day.orderedExercises.enumerated().map { exerciseIndex, exercise in
+                let logged = LoggedExercise(name: exercise.name, order: exerciseIndex, librarySlug: exercise.librarySlug)
+                logged.sets = exercise.orderedSets.enumerated().map { setIndex, set in
+                    let weight = set.weightKg.map { $0 + progression }
+                    let reps = set.repsMin == 0 ? Int.random(in: 8...14) : set.repsMax
+                    let loggedSet = LoggedSet(order: setIndex, reps: reps, weightKg: weight)
+                    loggedSet.completedAt = sessionDate.addingTimeInterval(TimeInterval(300 + setIndex * 180 + exerciseIndex * 600))
+                    return loggedSet
+                }
+                return logged
+            }
+            modelContext.insert(log)
+            sessionIndex += 1
+            sessionDate.addTimeInterval(TimeInterval(Int.random(in: 2...3) * 86400))
+        }
+        try? modelContext.save()
     }
 }
 

@@ -1,0 +1,15 @@
+name: Fortiche
+subtitle: Paste a program. Go lift.
+promotional_text: Paste any workout program as text — on-device AI turns it into a trackable plan for iPhone and Apple Watch. Private by architecture: no account, no server, no analytics.
+keywords: workout,strength,gym,lifting,barbell,program,tracker,sets,reps,5/3/1,powerlifting,rest timer
+primary_category: HEALTH_AND_FITNESS
+secondary_category: SPORTS
+price_tier: 0 (Free)
+age_rating: 4+ (all questionnaire answers: None)
+copyright: © 2026 David Ruiz
+support_url: https://github.com/davidruiz/fortiche  # TODO: real repo URL when public
+marketing_url: (none for v1)
+privacy_policy_url: (host PRIVACY.md — e.g. GitHub Pages — before submission)
+
+release_notes (1.0):
+Initial release. Paste a program, train it on iPhone or Apple Watch, and watch your numbers climb.

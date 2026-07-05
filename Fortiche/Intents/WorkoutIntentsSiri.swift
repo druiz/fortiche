@@ -1,6 +1,10 @@
-#if canImport(AppIntents) && !os(watchOS)
+// Siri-facing intents, in the APP TARGET on purpose: AppShortcutsProvider is
+// only supported in the app bundle, and package-hosted App Intents produce
+// `extract.packagedata` that linkd fails to resolve on this beta (EINVAL),
+// which blocks indexing of the entire bundle's intents.
 import AppIntents
 import Foundation
+import FortichePack
 
 /// "Start my Push day" — begins a workout for a chosen template day.
 /// Surfaces to Siri, Spotlight, the Action button, and Control Center.
@@ -88,9 +92,6 @@ public struct NextExerciseIntent: AppIntent {
     }
 }
 
-/// Lets the app target pull AppIntents metadata out of this package.
-public struct FortichePackage: AppIntentsPackage {}
-
 /// Spoken failure for intents that run before the app has registered its
 /// coordinator (e.g. cold-launch races).
 public enum IntentError: Error, CustomLocalizedStringResourceConvertible {
@@ -144,4 +145,3 @@ public struct ForticheShortcuts: AppShortcutsProvider {
         )
     }
 }
-#endif

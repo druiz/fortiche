@@ -1,5 +1,5 @@
-#if canImport(AppIntents) && !os(watchOS)
 import AppIntents
+import FortichePack
 import Foundation
 import SwiftData
 
@@ -68,4 +68,3 @@ extension WorkoutDayQuery: EnumerableEntityQuery {
         try Self.allDays()
     }
 }
-#endif

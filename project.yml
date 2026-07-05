@@ -21,6 +21,13 @@ settings:
     CURRENT_PROJECT_VERSION: 1
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: M9MD9VA4G3
+    # Debug builds normally put code in <App>.debug.dylib behind a stub main
+    # binary. linkd cannot parse the stub ("Failed to resolve package data …
+    # Invalid argument"), refuses to index the bundle's App Intents metadata,
+    # and every Live Activity button tap then fails with "There is no metadata
+    # for <Intent>". Keep all code in the main executable so debug builds
+    # behave like release builds. Costs: slower SwiftUI-preview relaunches.
+    ENABLE_DEBUG_DYLIB: NO
 
 targets:
   Fortiche:

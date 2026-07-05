@@ -94,6 +94,37 @@ swift test --package-path FortichePack
 Set `DEVELOPMENT_TEAM` in `project.yml` for device builds. See `CLAUDE.md`
 for CLI build commands and simulator caveats.
 
+## Contributing — humans and agents welcome
+
+This repo is deliberately structured so that AI coding agents can contribute
+at full quality. If you're pointing an agent (Claude Code or similar) at it:
+
+1. **Start at the repo root.** `CLAUDE.md` carries the build commands,
+   simulator caveats, and the hard rules; agents that respect it avoid the
+   expensive mistakes.
+2. **Load the skill library.** `.claude/skills/` contains the project's
+   institutional memory: a debugging playbook, the failure archaeology
+   (every trap that cost real time, with the evidence that settled it), the
+   architecture contract, diagnostic scripts, and a decision-gated campaign
+   for the hardest open problem (real-device live-sync verification). Have
+   your agent load `fortiche-change-control` before making any change, and
+   the relevant sibling skill before touching a subsystem.
+3. **Prove it, don't eyeball it.** Tests green
+   (`swift test --package-path FortichePack`), both platforms building, and
+   PRs that include the evidence — test output, screenshots, log lines. UI
+   claims need screenshots; sync claims need logs; and nothing about
+   watch↔phone mirroring may be claimed from simulator runs (it can't work
+   there — see `docs/SPIKE-M1.5.md`).
+4. **Don't hand-edit generated artifacts.** The Xcode project comes from
+   `project.yml` (`xcodegen generate`), icons from
+   `Scripts/generate_icon.swift`, the exercise dataset from
+   `Scripts/import_exercises.py`.
+
+Humans: same rules, fewer tokens. Full details in
+[CONTRIBUTING.md](CONTRIBUTING.md). If the skill library ever drifts from
+reality, regenerate it by handing your agent
+[docs/SKILL_LIBRARY_PROMPT.md](docs/SKILL_LIBRARY_PROMPT.md).
+
 ## Acknowledgements
 
 Exercise data from [free-exercise-db](https://github.com/yuhonas/free-exercise-db)

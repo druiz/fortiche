@@ -1,48 +1,12 @@
 #if canImport(ActivityKit) && !os(macOS)
-import AppIntents
 import Foundation
 import os
 
-/// Intents behind the Live Activity's interactive buttons. `LiveActivityIntent`
-/// performs in the app's process, where `WorkoutIntentBridge` is wired to the
-/// active workout host (authoritative controller or mirror client).
-public struct SkipRestIntent: LiveActivityIntent {
-    public static let title: LocalizedStringResource = "Skip Rest"
-    public static let isDiscoverable = false
-
-    public init() {}
-
-    public func perform() async throws -> some IntentResult {
-        await WorkoutIntentBridge.shared.submit(.skipRest)
-        return .result()
-    }
-}
-
-public struct PauseResumeIntent: LiveActivityIntent {
-    public static let title: LocalizedStringResource = "Pause or Resume Workout"
-    public static let isDiscoverable = false
-
-    public init() {}
-
-    public func perform() async throws -> some IntentResult {
-        await WorkoutIntentBridge.shared.togglePause()
-        return .result()
-    }
-}
-
-/// Big green "Done Set" button on the Live Activity — logs the current set at
-/// its prescription without unlocking the phone.
-public struct CompleteSetIntent: LiveActivityIntent {
-    public static let title: LocalizedStringResource = "Complete Set"
-    public static let isDiscoverable = false
-
-    public init() {}
-
-    public func perform() async throws -> some IntentResult {
-        await WorkoutIntentBridge.shared.completeCurrentSet()
-        return .result()
-    }
-}
+// NOTE: the Live Activity button intents themselves live in
+// Shared/LiveActivityIntents.swift, compiled directly into both the app and
+// widget targets — package-hosted LiveActivityIntents extract metadata
+// without per-bundle type mappings and their button taps go nowhere. Only
+// the bridge they call lives here.
 
 /// Routes intent invocations to whichever engine is currently active.
 /// App targets set `engineProvider` at launch.
@@ -70,17 +34,17 @@ public final class WorkoutIntentBridge {
         return recovered
     }
 
-    func submit(_ command: WorkoutCommand) {
+    public func submit(_ command: WorkoutCommand) {
         Self.logger.info("live-activity intent: \(String(describing: command), privacy: .public)")
         engine(for: "submit")?.submit(command)
     }
 
-    func togglePause() {
+    public func togglePause() {
         guard let engine = engine(for: "togglePause") else { return }
         engine.submit(engine.state.phase == .paused ? .resume : .pause)
     }
 
-    func completeCurrentSet() {
+    public func completeCurrentSet() {
         Self.logger.info("live-activity intent: completeCurrentSet")
         engine(for: "completeCurrentSet")?.completeCurrentSet()
     }

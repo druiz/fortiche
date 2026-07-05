@@ -26,7 +26,9 @@ targets:
   Fortiche:
     type: application
     platform: iOS
-    sources: [Fortiche]
+    # `Shared` holds sources compiled into BOTH the app and the widget
+    # extension (Live Activity intents need a copy in each binary).
+    sources: [Fortiche, Shared]
     dependencies:
       - package: FortichePack
       - target: ForticheWatch
@@ -79,7 +81,7 @@ targets:
   ForticheWidgets:
     type: app-extension
     platform: iOS
-    sources: [ForticheWidgets]
+    sources: [ForticheWidgets, Shared]
     dependencies:
       - package: FortichePack
     settings:

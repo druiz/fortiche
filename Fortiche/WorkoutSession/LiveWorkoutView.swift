@@ -40,24 +40,29 @@ struct LiveWorkoutView: View {
                         }
                     }
                     // Workouts under 3 minutes are discarded entirely (no log,
-                    // no HealthKit sample) — the dialog title warns which
-                    // outcome the user is choosing.
-                    .confirmationDialog(
-                        engine.state.qualifiesForSaving
-                            ? "End workout?"
-                            : "This workout is under 3 minutes and won't be saved.",
-                        isPresented: $showingEndConfirmation,
-                        titleVisibility: .visible
+                    // no HealthKit sample) — the alert makes the outcome
+                    // explicit before the user commits. Saving is the normal
+                    // path, so only the discard action is styled destructive.
+                    .alert(
+                        engine.state.qualifiesForSaving ? "End Workout?" : "Discard Workout?",
+                        isPresented: $showingEndConfirmation
                     ) {
                         Button(
-                            engine.state.qualifiesForSaving ? "End & Save" : "Discard Workout",
-                            role: .destructive
+                            engine.state.qualifiesForSaving ? "End & Save" : "Discard",
+                            role: engine.state.qualifiesForSaving ? nil : .destructive
                         ) {
                             Task {
                                 await controller.end(in: modelContext)
                                 dismiss()
                             }
                         }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text(
+                            engine.state.qualifiesForSaving
+                                ? "It will be saved to History and Apple Health."
+                                : "Workouts under 3 minutes aren't saved."
+                        )
                     }
             } else {
                 // Engine cleared (workout ended elsewhere).

@@ -60,13 +60,26 @@ struct HistoryPlaceholderView: View {
 }
 
 struct SettingsPlaceholderView: View {
+    @ObservedObject private var mirroring = MirroringReceiver.shared
+
     var body: some View {
         NavigationStack {
             List {
-                Text("Settings coming soon")
-                    .foregroundStyle(.secondary)
+                Section("Mirroring spike (M1.5)") {
+                    if mirroring.events.isEmpty {
+                        Text("Waiting for a workout to start on the watch…")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(Array(mirroring.events.enumerated()), id: \.offset) { _, event in
+                            Text(event).font(.caption.monospaced())
+                        }
+                    }
+                }
             }
             .navigationTitle("Settings")
+            .task {
+                await mirroring.requestAuthorization()
+            }
         }
     }
 }

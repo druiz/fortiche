@@ -1,3 +1,5 @@
+import ActivityKit
+import FortichePack
 import SwiftUI
 import WidgetKit
 
@@ -5,7 +7,44 @@ import WidgetKit
 struct ForticheWidgetsBundle: WidgetBundle {
     var body: some Widget {
         NextWorkoutWidget()
-        // The workout Live Activity joins this bundle in M3/M4.
+        WorkoutLiveActivity()
+    }
+}
+
+/// Live workout surface: lock screen, Dynamic Island, and (automatically)
+/// the watch Smart Stack. Spike content for now; real set/rest state in M4.
+struct WorkoutLiveActivity: Widget {
+    var body: some WidgetConfiguration {
+        ActivityConfiguration(for: WorkoutActivityAttributes.self) { context in
+            HStack {
+                Image(systemName: "figure.strengthtraining.traditional")
+                VStack(alignment: .leading) {
+                    Text(context.attributes.workoutTitle).font(.headline)
+                    Text(context.state.statusText).font(.caption)
+                }
+                Spacer()
+            }
+            .padding()
+            .activityBackgroundTint(.black.opacity(0.6))
+        } dynamicIsland: { context in
+            DynamicIsland {
+                DynamicIslandExpandedRegion(.leading) {
+                    Image(systemName: "figure.strengthtraining.traditional")
+                }
+                DynamicIslandExpandedRegion(.center) {
+                    Text(context.attributes.workoutTitle).font(.headline)
+                }
+                DynamicIslandExpandedRegion(.bottom) {
+                    Text(context.state.statusText).font(.caption)
+                }
+            } compactLeading: {
+                Image(systemName: "figure.strengthtraining.traditional")
+            } compactTrailing: {
+                Text("●").foregroundStyle(.green)
+            } minimal: {
+                Image(systemName: "figure.strengthtraining.traditional")
+            }
+        }
     }
 }
 

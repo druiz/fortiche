@@ -25,24 +25,46 @@ struct ForticheWatchApp: App {
 
 struct WatchRootView: View {
     @Query(sort: \WorkoutTemplate.createdAt, order: .reverse) private var templates: [WorkoutTemplate]
+    @StateObject private var spike = SpikeWorkoutController()
 
     var body: some View {
         NavigationStack {
-            if templates.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "iphone.and.arrow.forward")
-                        .font(.title2)
-                        .foregroundStyle(.secondary)
-                    Text("Add a program on your iPhone to get started.")
-                        .multilineTextAlignment(.center)
-                        .font(.footnote)
+            List {
+                Section {
+                    if spike.isRunning {
+                        Button("End Spike", role: .destructive) { spike.end() }
+                    } else {
+                        Button("Start Spike") {
+                            Task { await spike.start() }
+                        }
+                    }
+                    ForEach(Array(spike.events.suffix(6).enumerated()), id: \.offset) { _, event in
+                        Text(event).font(.footnote)
+                    }
+                } header: {
+                    Text("Mirroring spike")
                 }
-                .navigationTitle("Fortiche")
-            } else {
-                List(templates) { template in
-                    Text(template.name)
+
+                Section {
+                    if templates.isEmpty {
+                        Text("Add a program on your iPhone to get started.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(templates) { template in
+                            Text(template.name)
+                        }
+                    }
+                } header: {
+                    Text("Programs")
                 }
-                .navigationTitle("Fortiche")
+            }
+            .navigationTitle("Fortiche")
+            .task {
+                // CLI automation hook: `simctl launch … --spike-autostart`
+                if ProcessInfo.processInfo.arguments.contains("--spike-autostart"), !spike.isRunning {
+                    await spike.start()
+                }
             }
         }
     }

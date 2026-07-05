@@ -7,9 +7,9 @@ secondary_category: SPORTS
 price_tier: 0 (Free)
 age_rating: 4+ (all questionnaire answers: None)
 copyright: © 2026 David Ruiz
-support_url: https://github.com/davidruiz/fortiche  # TODO: real repo URL when public
+support_url: https://github.com/druiz/fortiche
 marketing_url: (none for v1)
-privacy_policy_url: (host PRIVACY.md — e.g. GitHub Pages — before submission)
+privacy_policy_url: https://github.com/druiz/fortiche/blob/main/PRIVACY.md
 
 release_notes (1.0):
 Initial release. Paste a program, train it on iPhone or Apple Watch, and watch your numbers climb.

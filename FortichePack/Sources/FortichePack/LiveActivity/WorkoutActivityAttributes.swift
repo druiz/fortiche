@@ -1,4 +1,4 @@
-#if canImport(ActivityKit)
+#if canImport(ActivityKit) && !os(macOS)
 import ActivityKit
 
 /// Shared between the iOS app (which starts the activity from the mirroring

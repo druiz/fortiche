@@ -1,7 +1,9 @@
 import Foundation
-// FoundationModels is API-unavailable in the watch *simulator* slice (the
-// on-watch LLM needs real hardware); real watchOS 27 devices do have it.
-#if canImport(FoundationModels) && !(os(watchOS) && targetEnvironment(simulator))
+// On watchOS 27, LanguageModelSession exists but SystemLanguageModel (the
+// local model) and @Generable guided generation are marked unavailable — the
+// watch only gets cloud-backed models. Parsing is iPhone-side, so exclude
+// watchOS from this compile path entirely.
+#if canImport(FoundationModels) && !os(watchOS)
 import FoundationModels
 #endif
 
@@ -45,9 +47,11 @@ public struct HeuristicProgramParser: ProgramParsing {
     }
 }
 
-// FoundationModels is API-unavailable in the watch *simulator* slice (the
-// on-watch LLM needs real hardware); real watchOS 27 devices do have it.
-#if canImport(FoundationModels) && !(os(watchOS) && targetEnvironment(simulator))
+// On watchOS 27, LanguageModelSession exists but SystemLanguageModel (the
+// local model) and @Generable guided generation are marked unavailable — the
+// watch only gets cloud-backed models. Parsing is iPhone-side, so exclude
+// watchOS from this compile path entirely.
+#if canImport(FoundationModels) && !os(watchOS)
 
 // MARK: - Guided-generation schema
 // One day per generation request: pass 1 (deterministic segmentation) keeps each

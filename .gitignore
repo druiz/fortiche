@@ -10,3 +10,6 @@ xcuserdata/
 
 # macOS
 .DS_Store
+
+# Local archives
+build/

@@ -53,6 +53,7 @@ targets:
     info:
       path: Fortiche/Info.plist
       properties:
+        CFBundleDisplayName: Fortiche
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         NSHealthShareUsageDescription: Fortiche reads health data such as body weight and heart rate to personalize your training.
@@ -84,6 +85,7 @@ targets:
     info:
       path: ForticheWatch/Info.plist
       properties:
+        CFBundleDisplayName: Fortiche
         WKApplication: true
         WKCompanionAppBundleIdentifier: com.davidruiz.fortiche
         WKBackgroundModes: [workout-processing]
@@ -107,6 +109,7 @@ targets:
     info:
       path: ForticheWidgets/Info.plist
       properties:
+        CFBundleDisplayName: Fortiche
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     entitlements:

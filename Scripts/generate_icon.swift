@@ -1,9 +1,15 @@
-// App-icon generator. Draws the Fortiche icon (and alternates) with
-// CoreGraphics and writes 1024×1024 PNGs — no external tools needed.
+// App-icon generator. Draws the Fortiche icon set with CoreGraphics and
+// writes 1024×1024 PNGs — no external tools needed.
+//
+// Regenerate everything (primary icon, alternate colorways, in-app previews,
+// watch icon) straight into the asset catalogs:
+//
+//   swift Scripts/generate_icon.swift --catalog
+//
+// Or render individual concepts to a directory for eyeballing:
 //
 //   swift Scripts/generate_icon.swift <output-dir> [concept]
 //
-// Concepts: "monogram" (default, the shipped icon), "dumbbell", "plate".
 // iOS applies its own masking/Liquid Glass treatment; we render a full-bleed
 // square with no pre-rounded corners.
 
@@ -13,6 +19,21 @@ import ImageIO
 import UniformTypeIdentifiers
 
 let size: CGFloat = 1024
+
+// MARK: - Colorways
+
+/// The selectable icon colorways. Order here drives nothing at runtime —
+/// the app lists them explicitly in SettingsView — but names must match:
+/// asset "AppIcon[-Name]" and preview "IconPreview-Name".
+let colorways: [(name: String, top: UInt32, bottom: UInt32, glyph: UInt32)] = [
+    ("Indigo", 0x5E5CE6, 0x2E2C9E, 0xFFFFFF),   // default
+    ("Ember", 0xFF7A3D, 0xC1272D, 0xFFFFFF),
+    ("Forest", 0x30D158, 0x146B33, 0xFFFFFF),
+    ("Midnight", 0x3A3A3C, 0x0B0B0F, 0xFFFFFF),
+    ("Ivory", 0xF5F5F7, 0xD8D8DF, 0x4B49C8),
+]
+
+// MARK: - Drawing primitives
 
 func makeContext() -> CGContext {
     CGContext(
@@ -52,7 +73,7 @@ func rounded(_ ctx: CGContext, _ rect: CGRect, radius: CGFloat) {
     ctx.fillPath()
 }
 
-/// Soft drop shadow for the glyph so it lifts off the gradient.
+/// Soft drop shadow so the glyph lifts off the gradient.
 func withGlyphShadow(_ ctx: CGContext, _ draw: () -> Void) {
     ctx.saveGState()
     ctx.setShadow(
@@ -64,52 +85,12 @@ func withGlyphShadow(_ ctx: CGContext, _ draw: () -> Void) {
     ctx.restoreGState()
 }
 
-// MARK: Concept: "monogram" — an F whose strokes are barbells
+// MARK: - The icon: 45° dumbbell
 
-func drawMonogram(_ ctx: CGContext) {
-    drawBackground(ctx, top: 0x5E5CE6, bottom: 0x2E2C9E) // indigo
-
-    ctx.setFillColor(CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1))
-    let stroke: CGFloat = 118          // bar thickness
-    let radius = stroke / 2
-
-    // Geometry (y-up): vertical stem + two horizontal "bars" ending in plates.
-    let stemX: CGFloat = 268
-    let topBarY: CGFloat = 700
-    let midBarY: CGFloat = 452
-    let stemBottom: CGFloat = 196
-
-    withGlyphShadow(ctx) {
-        // Vertical stem.
-        rounded(ctx, CGRect(x: stemX, y: stemBottom, width: stroke, height: topBarY + stroke - stemBottom), radius: radius)
-        // Top bar (longer) and middle bar (shorter), like an F.
-        rounded(ctx, CGRect(x: stemX, y: topBarY, width: 448, height: stroke), radius: radius)
-        rounded(ctx, CGRect(x: stemX, y: midBarY, width: 330, height: stroke), radius: radius)
-    }
-
-    // Plates at each bar's right end: inner tall plate + outer shorter plate,
-    // the visual signature of a loaded barbell.
-    func plates(endingAtX endX: CGFloat, barY: CGFloat) {
-        let plateW: CGFloat = 64
-        let gap: CGFloat = 26
-        let innerH: CGFloat = 330
-        let outerH: CGFloat = 240
-        let centerY = barY + stroke / 2
-        withGlyphShadow(ctx) {
-            rounded(ctx, CGRect(x: endX + gap, y: centerY - innerH / 2, width: plateW, height: innerH), radius: 26)
-            rounded(ctx, CGRect(x: endX + gap + plateW + 22, y: centerY - outerH / 2, width: plateW, height: outerH), radius: 26)
-        }
-    }
-    plates(endingAtX: stemX + 448, barY: topBarY)
-    plates(endingAtX: stemX + 330, barY: midBarY)
-}
-
-// MARK: Concept: "dumbbell" — classic 45° dumbbell silhouette (the shipped icon)
-
-func drawDumbbell(_ ctx: CGContext, top: UInt32 = 0x5E5CE6, bottom: UInt32 = 0x2E2C9E) {
+func drawDumbbell(_ ctx: CGContext, top: UInt32, bottom: UInt32, glyph: UInt32) {
     drawBackground(ctx, top: top, bottom: bottom)
 
-    ctx.setFillColor(CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1))
+    ctx.setFillColor(rgb(glyph))
     ctx.translateBy(x: size / 2, y: size / 2)
     ctx.rotate(by: .pi / 4)
 
@@ -124,53 +105,100 @@ func drawDumbbell(_ ctx: CGContext, top: UInt32 = 0x5E5CE6, bottom: UInt32 = 0x2
     }
 }
 
-func drawDumbbellEmber(_ ctx: CGContext) {
-    drawDumbbell(ctx, top: 0xFF7A3D, bottom: 0xC1272D)
-}
-
-// MARK: Concept: "plate" — end-on weight plate
-
-func drawPlate(_ ctx: CGContext) {
-    drawBackground(ctx, top: 0x30D158, bottom: 0x1B7A3D) // green
-
-    let center = CGPoint(x: size / 2, y: size / 2)
-    ctx.setFillColor(CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1))
-    withGlyphShadow(ctx) {
-        ctx.addArc(center: center, radius: 340, startAngle: 0, endAngle: 2 * .pi, clockwise: false)
-        ctx.fillPath()
-    }
-    // Recessed ring + center bore, punched out of the plate.
-    ctx.setBlendMode(.clear)
-    ctx.setLineWidth(34)
-    ctx.addArc(center: center, radius: 236, startAngle: 0, endAngle: 2 * .pi, clockwise: false)
-    ctx.replacePathWithStrokedPath()
-    ctx.fillPath()
-    ctx.addArc(center: center, radius: 74, startAngle: 0, endAngle: 2 * .pi, clockwise: false)
-    ctx.fillPath()
-    ctx.setBlendMode(.normal)
-}
-
-// MARK: Main
-
-let args = CommandLine.arguments
-let outputDir = URL(fileURLWithPath: args.count > 1 ? args[1] : ".")
-let registry: [String: (CGContext) -> Void] = [
-    "monogram": drawMonogram,
-    "dumbbell": { drawDumbbell($0) },
-    "dumbbell-ember": drawDumbbellEmber,
-    "plate": drawPlate,
-]
-let concepts: [(String, (CGContext) -> Void)] = args.count > 2
-    ? [(args[2], registry[args[2]]!)]
-    : registry.map { ($0.key, $0.value) }
-
-try? FileManager.default.createDirectory(at: outputDir, withIntermediateDirectories: true)
-for (name, draw) in concepts {
+func render(top: UInt32, bottom: UInt32, glyph: UInt32) -> CGImage {
     let ctx = makeContext()
-    draw(ctx)
-    let url = outputDir.appendingPathComponent("icon-\(name).png")
+    drawDumbbell(ctx, top: top, bottom: bottom, glyph: glyph)
+    return ctx.makeImage()!
+}
+
+func writePNG(_ image: CGImage, to url: URL) {
+    try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
     let dest = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil)!
-    CGImageDestinationAddImage(dest, ctx.makeImage()!, nil)
+    CGImageDestinationAddImage(dest, image, nil)
     CGImageDestinationFinalize(dest)
     print("wrote \(url.path)")
+}
+
+func writeJSON(_ text: String, to url: URL) {
+    try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try? text.write(to: url, atomically: true, encoding: .utf8)
+}
+
+// MARK: - Catalog emission
+
+/// Writes the primary icon, alternate-icon sets, preview image sets, and the
+/// watch icon into the asset catalogs. Idempotent — safe to re-run.
+func emitCatalogs(repoRoot: URL) {
+    let iosCatalog = repoRoot.appending(path: "Fortiche/Assets.xcassets")
+    let watchCatalog = repoRoot.appending(path: "ForticheWatch/Assets.xcassets")
+
+    func appIconContents(filename: String, platform: String) -> String {
+        """
+        {
+          "images" : [
+            {
+              "filename" : "\(filename)",
+              "idiom" : "universal",
+              "platform" : "\(platform)",
+              "size" : "1024x1024"
+            }
+          ],
+          "info" : { "author" : "xcode", "version" : 1 }
+        }
+        """
+    }
+
+    func imageSetContents(filename: String) -> String {
+        """
+        {
+          "images" : [
+            { "filename" : "\(filename)", "idiom" : "universal" }
+          ],
+          "info" : { "author" : "xcode", "version" : 1 }
+        }
+        """
+    }
+
+    for (index, colorway) in colorways.enumerated() {
+        let image = render(top: colorway.top, bottom: colorway.bottom, glyph: colorway.glyph)
+        // First colorway is the primary "AppIcon"; the rest are alternates
+        // named AppIcon-<Name> (must match ASSETCATALOG_COMPILER_ALTERNATE_
+        // APPICON_NAMES in project.yml and the SettingsView list).
+        let setName = index == 0 ? "AppIcon" : "AppIcon-\(colorway.name)"
+        let iconSet = iosCatalog.appending(path: "\(setName).appiconset")
+        writePNG(image, to: iconSet.appending(path: "AppIcon.png"))
+        writeJSON(appIconContents(filename: "AppIcon.png", platform: "ios"), to: iconSet.appending(path: "Contents.json"))
+
+        // Preview image for the in-app picker (alternate appiconsets aren't
+        // loadable via UIImage(named:), so each colorway also ships as a
+        // regular image set).
+        let previewSet = iosCatalog.appending(path: "IconPreview-\(colorway.name).imageset")
+        writePNG(image, to: previewSet.appending(path: "preview.png"))
+        writeJSON(imageSetContents(filename: "preview.png"), to: previewSet.appending(path: "Contents.json"))
+    }
+
+    // Watch: alternate icons aren't supported on watchOS — default only.
+    let defaultColorway = colorways[0]
+    let watchImage = render(top: defaultColorway.top, bottom: defaultColorway.bottom, glyph: defaultColorway.glyph)
+    let watchSet = watchCatalog.appending(path: "AppIcon.appiconset")
+    writePNG(watchImage, to: watchSet.appending(path: "AppIcon.png"))
+    writeJSON(appIconContents(filename: "AppIcon.png", platform: "watchos"), to: watchSet.appending(path: "Contents.json"))
+}
+
+// MARK: - Main
+
+let args = CommandLine.arguments
+if args.contains("--catalog") {
+    // Repo root = parent of Scripts/.
+    let root = URL(fileURLWithPath: args[0]).deletingLastPathComponent().deletingLastPathComponent()
+    emitCatalogs(repoRoot: root)
+} else {
+    let outputDir = URL(fileURLWithPath: args.count > 1 ? args[1] : ".")
+    let wanted = args.count > 2 ? [args[2]] : colorways.map(\.name)
+    for colorway in colorways where wanted.contains(colorway.name) {
+        writePNG(
+            render(top: colorway.top, bottom: colorway.bottom, glyph: colorway.glyph),
+            to: outputDir.appending(path: "icon-\(colorway.name).png")
+        )
+    }
 }

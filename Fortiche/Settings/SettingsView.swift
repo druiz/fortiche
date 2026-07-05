@@ -19,6 +19,10 @@ struct SettingsView: View {
                     }
                 }
 
+                Section("App Icon") {
+                    AppIconPicker()
+                }
+
                 Section("Tools") {
                     NavigationLink {
                         PlateCalculatorView(unit: unit)

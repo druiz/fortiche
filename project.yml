@@ -46,6 +46,10 @@ targets:
         TARGETED_DEVICE_FAMILY: 1
         SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # User-selectable alternates (Settings → App Icon). Names must match
+        # the AppIcon-<Name>.appiconset entries emitted by
+        # Scripts/generate_icon.swift and the list in SettingsView.
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: AppIcon-Ember AppIcon-Forest AppIcon-Midnight AppIcon-Ivory
     info:
       path: Fortiche/Info.plist
       properties:

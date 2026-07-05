@@ -4,10 +4,12 @@
 
 # Fortiche
 
-Hi, I'm David. I'm a software engineer that loves to workout. I've used
-Anthropic Fable to build me the perfect workout app and I'm very pleased with
-the results. The app is extensively using iOS 27 APIs so will be available
-(for free) in September upon the new OS releases.
+Hi, I'm David. I'm a software engineer that loves to workout. Like many, I'm
+using AI to create my gym programs. I've used Anthropic Fable to build me the
+perfect workout app that takes in a Gemini/Claude/ChatGPT workout plan in full
+text and generate a workout program to track reps/sets/weights. I'm very
+pleased with the results. The app is extensively using iOS 27 APIs so will be
+available (for free) in September upon the new OS releases.
 
 A strength-training app for iPhone and Apple Watch, built exclusively on the
 iOS 27 / watchOS 27 SDKs. Paste any workout program as plain text and on-device

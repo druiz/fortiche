@@ -107,6 +107,35 @@ public final class ActiveWorkoutEngine {
         return nil
     }
 
+    /// Exercise/set indices of the set the user is working on, or nil when
+    /// everything is done.
+    public var currentSetLocation: (exercise: Int, set: Int)? {
+        let exerciseIndex = state.currentExercise?.isDone == false
+            ? state.currentExerciseIndex
+            : state.exercises.firstIndex { !$0.isDone }
+        guard let exerciseIndex,
+              let setIndex = state.exercises[exerciseIndex].currentSetIndex else { return nil }
+        return (exerciseIndex, setIndex)
+    }
+
+    /// Complete the current set with the given actuals (defaulting to the
+    /// prescription). Shared by Siri intents and Live Activity buttons.
+    /// Returns what was logged, or nil if nothing is pending.
+    @discardableResult
+    public func completeCurrentSet(reps: Int? = nil, weightKg: Double? = nil) -> (reps: Int, weightKg: Double?)? {
+        guard let location = currentSetLocation else { return nil }
+        let set = state.exercises[location.exercise].sets[location.set]
+        let loggedReps = reps ?? set.targetRepsMax
+        let loggedWeight = weightKg ?? set.weightKg
+        submit(.completeSet(
+            exercise: location.exercise,
+            set: location.set,
+            reps: loggedReps,
+            weightKg: loggedWeight
+        ))
+        return (loggedReps, loggedWeight)
+    }
+
     // MARK: Mutation
 
     private func run(_ command: WorkoutCommand) {

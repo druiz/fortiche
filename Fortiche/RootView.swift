@@ -38,7 +38,15 @@ struct RootView: View {
 struct TemplateListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \WorkoutTemplate.createdAt, order: .reverse) private var templates: [WorkoutTemplate]
+    @Query(sort: \WorkoutLog.startedAt, order: .reverse) private var logs: [WorkoutLog]
     @State private var showingImport = false
+    /// Expansion is user-toggleable; nil = "not decided yet" (defaults open
+    /// for the active program, collapsed for the rest).
+    @State private var expanded: [UUID: Bool] = [:]
+
+    private var activeTemplateUUID: UUID? {
+        ProgramSchedule.activeTemplate(in: templates, logs: logs)?.uuid
+    }
 
     var body: some View {
         NavigationStack {
@@ -53,25 +61,7 @@ struct TemplateListView: View {
                             .buttonStyle(.borderedProminent)
                     }
                 } else {
-                    List {
-                        ForEach(templates) { template in
-                            NavigationLink {
-                                TemplateDetailView(template: template)
-                            } label: {
-                                VStack(alignment: .leading) {
-                                    Text(template.name).font(.headline)
-                                    Text("^[\(template.orderedDays.count) day](inflect: true) · ^[\(template.orderedDays.flatMap(\.orderedExercises).count) exercise](inflect: true)")
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                        .onDelete { offsets in
-                            for offset in offsets { modelContext.delete(templates[offset]) }
-                            try? modelContext.save()
-                            pushTemplatesToWatch(modelContext)
-                        }
-                    }
+                    programList
                 }
             }
             .navigationTitle("Programs")
@@ -85,6 +75,62 @@ struct TemplateListView: View {
             }
             .task { await runDemoImportIfRequested() }
         }
+    }
+
+    private var programList: some View {
+        List {
+            ForEach(templates) { template in
+                let isActive = template.uuid == activeTemplateUUID
+                let nextDay = ProgramSchedule.nextDay(in: template, logs: logs)
+                Section {
+                    DisclosureGroup(isExpanded: expansionBinding(for: template, defaultOpen: isActive)) {
+                        ForEach(template.orderedDays) { day in
+                            DayRow(
+                                day: day,
+                                isNextUp: isActive && day.uuid == nextDay?.uuid
+                            )
+                        }
+                        NavigationLink {
+                            TemplateDetailView(template: template)
+                        } label: {
+                            Label("Program details", systemImage: "info.circle")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    } label: {
+                        HStack(spacing: 8) {
+                            VStack(alignment: .leading) {
+                                Text(template.name).font(.headline)
+                                Text("^[\(template.orderedDays.count) day](inflect: true)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            if isActive, let nextDay {
+                                Spacer()
+                                Text("Next: \(nextDay.name)")
+                                    .font(.caption.bold())
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(Capsule().fill(.tint.opacity(0.15)))
+                                    .foregroundStyle(.tint)
+                            }
+                        }
+                    }
+                }
+            }
+            .onDelete { offsets in
+                for offset in offsets { modelContext.delete(templates[offset]) }
+                try? modelContext.save()
+                pushTemplatesToWatch(modelContext)
+            }
+        }
+    }
+
+    private func expansionBinding(for template: WorkoutTemplate, defaultOpen: Bool) -> Binding<Bool> {
+        Binding(
+            get: { expanded[template.uuid] ?? defaultOpen },
+            set: { expanded[template.uuid] = $0 }
+        )
     }
 
     /// CLI automation hook: `simctl launch … --demo-import` seeds a sample
@@ -126,8 +172,47 @@ struct TemplateListView: View {
     }
 }
 
+/// One training day inside a collapsible program: start button + next-up badge.
+struct DayRow: View {
+    let day: TemplateDay
+    let isNextUp: Bool
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(day.name).font(isNextUp ? .body.bold() : .body)
+                    if isNextUp {
+                        Text("NEXT UP")
+                            .font(.caption2.bold())
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(.tint))
+                            .foregroundStyle(.white)
+                    }
+                }
+                Text("^[\(day.orderedExercises.count) exercise](inflect: true)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button {
+                Task { await PhoneWorkoutController.shared.start(day: day) }
+            } label: {
+                Image(systemName: "play.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(isNextUp ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+            }
+            .buttonStyle(.borderless)
+            .disabled(PhoneWorkoutController.shared.isActive)
+        }
+        .listRowBackground(isNextUp ? Color.accentColor.opacity(0.08) : nil)
+    }
+}
+
 struct TemplateDetailView: View {
     let template: WorkoutTemplate
+    @State private var editing = false
     private let unit = WeightUnit.preferred
 
     var body: some View {
@@ -155,6 +240,14 @@ struct TemplateDetailView: View {
         }
         .navigationTitle(template.name)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button("Edit") { editing = true }
+            }
+        }
+        .sheet(isPresented: $editing) {
+            TemplateImportView(model: TemplateImportModel(editing: template))
+        }
     }
 
     private func summary(for exercise: TemplateExercise) -> String {
@@ -163,9 +256,9 @@ struct TemplateDetailView: View {
         var reps = first.repsMin == 0 ? "AMRAP" : "\(first.repsMin)"
         if first.repsMax > first.repsMin { reps = "\(first.repsMin)–\(first.repsMax)" }
         var text = "\(sets.count)×\(reps)"
-        if let percent = first.percentOfMax {
+        if let percent = first.percentOfMax, percent > 0 {
             text += " @ \(Int(percent))%"
-        } else if let kg = first.weightKg {
+        } else if let kg = first.weightKg, kg > 0 {
             text += " @ \(unit.format(kilograms: kg))"
         }
         text += " · rest \(exercise.restSeconds)s"

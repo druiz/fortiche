@@ -43,6 +43,7 @@ struct ForticheWatchApp: App {
 
 struct WatchRootView: View {
     @Query(sort: \WorkoutTemplate.createdAt, order: .reverse) private var templates: [WorkoutTemplate]
+    @Query(sort: \WorkoutLog.startedAt, order: .reverse) private var logs: [WorkoutLog]
     @State private var controller = WatchWorkoutController.shared
 
     var body: some View {
@@ -85,22 +86,31 @@ struct WatchRootView: View {
                 .listRowBackground(Color.clear)
             } else {
                 ForEach(templates) { template in
+                    let nextDay = ProgramSchedule.nextDay(in: template, logs: logs)
                     Section(template.name) {
                         ForEach(template.orderedDays) { day in
+                            let isNextUp = day.uuid == nextDay?.uuid
                             Button {
                                 Task { await controller.start(day: day) }
                             } label: {
                                 HStack {
                                     VStack(alignment: .leading) {
-                                        Text(day.name).font(.headline)
-                                        Text("^[\(day.orderedExercises.count) exercise](inflect: true)")
+                                        HStack(spacing: 4) {
+                                            Text(day.name).font(.headline)
+                                            if isNextUp {
+                                                Image(systemName: "arrow.forward.circle.fill")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.green)
+                                            }
+                                        }
+                                        Text(isNextUp ? "Next up" : "^[\(day.orderedExercises.count) exercise](inflect: true)")
                                             .font(.caption2)
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(isNextUp ? .green : .secondary)
                                     }
                                     Spacer()
                                     Image(systemName: "play.circle.fill")
                                         .font(.title3)
-                                        .foregroundStyle(.green)
+                                        .foregroundStyle(isNextUp ? .green : .secondary)
                                 }
                             }
                         }

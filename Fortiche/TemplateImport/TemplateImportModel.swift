@@ -19,8 +19,24 @@ final class TemplateImportModel {
     private(set) var parsedDays: [ParsedDay] = []
     private(set) var program: ParsedProgram?
     private(set) var usedFallback = false
+    /// Set when editing an existing template — save updates it in place.
+    private(set) var editingUUID: UUID?
 
     let availability = IntelligentProgramParser.availability
+
+    init() {}
+
+    /// Editor session for a saved template: opens straight in review with the
+    /// current structure; "Edit Text" allows re-parsing from the source text.
+    init(editing template: WorkoutTemplate) {
+        editingUUID = template.uuid
+        programName = template.name
+        sourceText = template.sourceText ?? ""
+        parsedDays = ParsedProgram(template: template).days
+        phase = .review
+    }
+
+    var isEditingExisting: Bool { editingUUID != nil }
 
     func parse() {
         guard !sourceText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
@@ -72,6 +88,26 @@ final class TemplateImportModel {
     func deleteExercise(_ exerciseID: UUID, inDay dayID: UUID) {
         guard let dayIndex = parsedDays.firstIndex(where: { $0.id == dayID }) else { return }
         parsedDays[dayIndex].exercises.removeAll { $0.id == exerciseID }
+    }
+
+    func addExercise(toDay dayID: UUID) -> ParsedExercise? {
+        guard let dayIndex = parsedDays.firstIndex(where: { $0.id == dayID }) else { return nil }
+        let exercise = ParsedExercise(name: "New Exercise", sets: [ParsedSet(repsMin: 8), ParsedSet(repsMin: 8), ParsedSet(repsMin: 8)])
+        parsedDays[dayIndex].exercises.append(exercise)
+        return exercise
+    }
+
+    func addDay() {
+        parsedDays.append(ParsedDay(name: "Day \(parsedDays.count + 1)", exercises: []))
+    }
+
+    func deleteDay(_ dayID: UUID) {
+        parsedDays.removeAll { $0.id == dayID }
+    }
+
+    /// Switch an edit session back to the text editor for re-parsing.
+    func editText() {
+        phase = .editing
     }
 
     func finalizedProgram() -> ParsedProgram {

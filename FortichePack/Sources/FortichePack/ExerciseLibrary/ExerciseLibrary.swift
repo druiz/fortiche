@@ -56,23 +56,10 @@ public struct ExerciseLibrary: Sendable {
 
     public subscript(slug: String) -> LibraryExercise? { bySlug[slug] }
 
-    /// Loose name lookup for canonicalization ("bench press" → Barbell_Bench_Press…).
-    /// Best-effort: exact (case/punctuation-insensitive) match first, then prefix,
-    /// then containment. Returns candidates ordered by match quality.
+    /// Loose name lookup ("OHP" → overhead press variants, typo-tolerant),
+    /// ranked by match quality. See `ExerciseMatcher` for the scoring.
     public func match(name: String, limit: Int = 5) -> [LibraryExercise] {
-        let needle = Self.normalize(name)
-        guard !needle.isEmpty else { return [] }
-
-        var exact: [LibraryExercise] = []
-        var prefix: [LibraryExercise] = []
-        var containing: [LibraryExercise] = []
-        for exercise in exercises {
-            let hay = Self.normalize(exercise.name)
-            if hay == needle { exact.append(exercise) }
-            else if hay.hasPrefix(needle) { prefix.append(exercise) }
-            else if hay.contains(needle) { containing.append(exercise) }
-        }
-        return Array((exact + prefix + containing).prefix(limit))
+        ExerciseMatcher.matches(for: name, in: self, limit: limit).map(\.exercise)
     }
 
     static func normalize(_ s: String) -> String {

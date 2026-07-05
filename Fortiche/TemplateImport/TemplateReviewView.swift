@@ -31,13 +31,36 @@ struct TemplateReviewView: View {
                             model.deleteExercise(day.exercises[offset].id, inDay: day.id)
                         }
                     }
+                    Button {
+                        _ = model.addExercise(toDay: day.id)
+                    } label: {
+                        Label("Add Exercise", systemImage: "plus")
+                            .font(.subheadline)
+                    }
                 } header: {
-                    TextField("Day name", text: Binding(
-                        get: { day.name },
-                        set: { model.updateDayName(day.id, to: $0) }
-                    ))
-                    .font(.headline)
-                    .textCase(nil)
+                    HStack {
+                        TextField("Day name", text: Binding(
+                            get: { day.name },
+                            set: { model.updateDayName(day.id, to: $0) }
+                        ))
+                        .font(.headline)
+                        .textCase(nil)
+                        Spacer()
+                        Button(role: .destructive) {
+                            model.deleteDay(day.id)
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                }
+            }
+            Section {
+                Button {
+                    model.addDay()
+                } label: {
+                    Label("Add Day", systemImage: "plus.rectangle.on.rectangle")
                 }
             }
         }
@@ -191,9 +214,9 @@ extension ParsedExercise {
             var reps = first.repsMin == 0 ? "AMRAP" : "\(first.repsMin)"
             if first.repsMax > first.repsMin { reps = "\(first.repsMin)–\(first.repsMax)" }
             var summary = "\(sets.count)×\(reps)"
-            if let percent = first.percentOfMax {
+            if let percent = first.percentOfMax, percent > 0 {
                 summary += " @ \(Int(percent))%"
-            } else if let kg = first.weightKg {
+            } else if let kg = first.weightKg, kg > 0 {
                 summary += " @ \(unit.format(kilograms: kg))"
             }
             return summary

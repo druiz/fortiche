@@ -79,6 +79,12 @@ struct WorkoutLiveActivity: Widget {
                     Label("Skip Rest", systemImage: "forward.fill")
                 }
                 .buttonStyle(.borderedProminent)
+            } else if !state.isPaused, state.setCount > 0 {
+                Button(intent: CompleteSetIntent()) {
+                    Label("Done Set", systemImage: "checkmark")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.green)
             }
         }
     }
@@ -98,25 +104,31 @@ struct LockScreenWorkoutView: View {
             }
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(context.state.exerciseName).font(.headline).lineLimit(1)
-                    if context.state.isPaused {
-                        Text("Paused").font(.subheadline).foregroundStyle(.secondary)
-                    } else if context.state.restUntil == nil {
-                        Text("Set \(context.state.setNumber) of \(context.state.setCount) · \(context.state.prescription)")
+                    if context.state.restUntil != nil {
+                        Text("Resting").font(.headline)
+                        // The current pointer already advanced — this IS the next set.
+                        Text("Next: \(context.state.exerciseName) · set \(context.state.setNumber) of \(context.state.setCount) · \(context.state.prescription)")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
+                            .lineLimit(2)
                     } else {
-                        Text("Resting")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                        Text(context.state.exerciseName).font(.headline).lineLimit(1)
+                        if context.state.isPaused {
+                            Text("Paused").font(.subheadline).foregroundStyle(.secondary)
+                        } else {
+                            Text("Set \(context.state.setNumber) of \(context.state.setCount) · \(context.state.prescription)")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
                 Spacer()
                 if let until = context.state.restUntil {
                     Text(timerInterval: Date.now...until, countsDown: true)
-                        .font(.title.bold().monospacedDigit())
-                        .frame(maxWidth: 90)
+                        .font(.system(size: 40, weight: .bold).monospacedDigit())
+                        .frame(maxWidth: 110)
                         .multilineTextAlignment(.trailing)
+                        .foregroundStyle(.tint)
                 }
             }
             HStack {
@@ -130,6 +142,13 @@ struct LockScreenWorkoutView: View {
                         Label("Skip Rest", systemImage: "forward.fill").font(.caption)
                     }
                     .buttonStyle(.borderedProminent)
+                } else if !context.state.isPaused, context.state.setCount > 0 {
+                    Button(intent: CompleteSetIntent()) {
+                        Label("Done — \(context.state.prescription)", systemImage: "checkmark")
+                            .font(.caption.bold())
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.green)
                 }
                 Spacer()
             }

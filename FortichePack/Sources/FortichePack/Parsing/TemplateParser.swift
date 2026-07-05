@@ -194,6 +194,9 @@ extension ParsedDay {
                         case .percentOfMax: percent = group.weight
                         case nil: weightKg = group.weight
                         }
+                        // Zero means "the model had nothing" — treat as bodyweight.
+                        if (weightKg ?? 0) <= 0 { weightKg = nil }
+                        if (percent ?? 0) <= 0 { percent = nil }
                         let count = min(30, max(1, group.setCount))
                         return (0..<count).map { _ in
                             ParsedSet(
@@ -216,17 +219,17 @@ extension ParsedDay {
 
 extension ParsedProgram {
     /// Best-effort match of each exercise against the bundled library.
-    /// Only confident (exact-normalized) matches are auto-assigned; the review
-    /// UI lets the user pick from looser candidates. Matching is optional by
-    /// design — unmatched exercises stay free-form.
+    /// Fuzzy but conservative: only confident matches (full query coverage,
+    /// clearly ahead of the runner-up) are auto-assigned; the review UI lets
+    /// the user pick from looser candidates. Matching is optional by design —
+    /// unmatched exercises stay free-form.
     public func canonicalized(with library: ExerciseLibrary = .shared) -> ParsedProgram {
         var program = self
         for dayIndex in program.days.indices {
             for exerciseIndex in program.days[dayIndex].exercises.indices {
                 let name = program.days[dayIndex].exercises[exerciseIndex].name
-                if let best = library.match(name: name, limit: 1).first,
-                   ExerciseLibrary.normalize(best.name) == ExerciseLibrary.normalize(name) {
-                    program.days[dayIndex].exercises[exerciseIndex].librarySlug = best.slug
+                if let match = ExerciseMatcher.confidentMatch(for: name, in: library) {
+                    program.days[dayIndex].exercises[exerciseIndex].librarySlug = match.slug
                 }
             }
         }

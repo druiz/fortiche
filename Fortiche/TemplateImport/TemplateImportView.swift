@@ -7,7 +7,11 @@ import FortichePack
 struct TemplateImportView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    @State private var model = TemplateImportModel()
+    @State private var model: TemplateImportModel
+
+    init(model: TemplateImportModel = TemplateImportModel()) {
+        _model = State(initialValue: model)
+    }
 
     var body: some View {
         NavigationStack {
@@ -21,10 +25,15 @@ struct TemplateImportView: View {
                     TemplateReviewView(model: model, onSave: save)
                 }
             }
-            .navigationTitle("New Program")
+            .navigationTitle(model.isEditingExisting ? "Edit Program" : "New Program")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                }
+                if model.isEditingExisting, model.phase == .review, !model.sourceText.isEmpty {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button("Edit Text", systemImage: "text.quote") { model.editText() }
+                    }
                 }
             }
         }
@@ -120,8 +129,14 @@ struct TemplateImportView: View {
 
     private func save() {
         let program = model.finalizedProgram()
-        let template = program.makeTemplate(sourceText: model.sourceText)
-        modelContext.insert(template)
+        if let uuid = model.editingUUID,
+           let existing = try? modelContext.fetch(
+               FetchDescriptor<WorkoutTemplate>(predicate: #Predicate { $0.uuid == uuid })
+           ).first {
+            program.apply(to: existing, sourceText: model.sourceText.isEmpty ? nil : model.sourceText, in: modelContext)
+        } else {
+            modelContext.insert(program.makeTemplate(sourceText: model.sourceText))
+        }
         try? modelContext.save()
         pushTemplatesToWatch(modelContext)
         dismiss()

@@ -27,25 +27,11 @@ final class ForticheWorkoutCoordinator: WorkoutCoordinating {
     }
 
     func logCurrentSet(reps: Int?, weightKg: Double?) -> String? {
-        guard let engine = activeEngine else { return nil }
-        let state = engine.state
-        let exerciseIndex = state.currentExercise?.isDone == false
-            ? state.currentExerciseIndex
-            : state.exercises.firstIndex { !$0.isDone }
-        guard let exerciseIndex,
-              let setIndex = state.exercises[exerciseIndex].currentSetIndex else { return nil }
-        let set = state.exercises[exerciseIndex].sets[setIndex]
-        let loggedReps = reps ?? set.targetRepsMax
-        engine.submit(.completeSet(
-            exercise: exerciseIndex,
-            set: setIndex,
-            reps: loggedReps,
-            weightKg: weightKg ?? set.weightKg
-        ))
-        let weight = weightKg ?? set.weightKg
+        guard let engine = activeEngine,
+              let logged = engine.completeCurrentSet(reps: reps, weightKg: weightKg) else { return nil }
         let unit = WeightUnit.preferred
-        let weightText = weight.map { " at \(unit.format(kilograms: $0))" } ?? ""
-        return "Logged \(loggedReps) reps\(weightText)."
+        let weightText = logged.weightKg.map { " at \(unit.format(kilograms: $0))" } ?? ""
+        return "Logged \(logged.reps) reps\(weightText)."
     }
 
     func endWorkout() async {

@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 // Parser output model — also the editable model behind the import review UI.
 // Deliberately plain values (no SwiftData) so it works on any actor and in tests;
@@ -67,6 +68,34 @@ public struct ParsedSet: Sendable, Equatable, Identifiable {
 }
 
 extension ParsedProgram {
+    /// Editable snapshot of a saved template (drives the template editor).
+    public init(template: WorkoutTemplate) {
+        self.init(
+            name: template.name,
+            days: template.orderedDays.map { day in
+                ParsedDay(
+                    name: day.name,
+                    exercises: day.orderedExercises.map { exercise in
+                        ParsedExercise(
+                            name: exercise.name,
+                            librarySlug: exercise.librarySlug,
+                            restSeconds: exercise.restSeconds,
+                            sets: exercise.orderedSets.map { set in
+                                ParsedSet(
+                                    repsMin: set.repsMin,
+                                    repsMax: set.repsMax,
+                                    weightKg: set.weightKg,
+                                    percentOfMax: set.percentOfMax,
+                                    rpe: set.rpe
+                                )
+                            }
+                        )
+                    }
+                )
+            }
+        )
+    }
+
     /// Materialize into the SwiftData model graph (insert the result into a context).
     public func makeTemplate(sourceText: String?) -> WorkoutTemplate {
         let template = WorkoutTemplate(name: name, sourceText: sourceText)
@@ -95,5 +124,22 @@ extension ParsedProgram {
             return templateDay
         }
         return template
+    }
+
+    /// Write this program's structure back onto an existing template
+    /// (in-place edit — the template keeps its UUID so history references,
+    /// Siri entities, and watch sync stay stable).
+    @MainActor
+    public func apply(to template: WorkoutTemplate, sourceText: String?, in context: ModelContext) {
+        for day in template.days ?? [] {
+            context.delete(day)
+        }
+        template.name = name
+        if let sourceText {
+            template.sourceText = sourceText
+        }
+        let rebuilt = makeTemplate(sourceText: nil)
+        template.days = rebuilt.days
+        rebuilt.days = []
     }
 }

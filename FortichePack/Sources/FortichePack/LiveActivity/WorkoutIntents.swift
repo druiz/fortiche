@@ -29,6 +29,20 @@ public struct PauseResumeIntent: LiveActivityIntent {
     }
 }
 
+/// Big green "Done Set" button on the Live Activity — logs the current set at
+/// its prescription without unlocking the phone.
+public struct CompleteSetIntent: LiveActivityIntent {
+    public static let title: LocalizedStringResource = "Complete Set"
+    public static let isDiscoverable = false
+
+    public init() {}
+
+    public func perform() async throws -> some IntentResult {
+        await WorkoutIntentBridge.shared.completeCurrentSet()
+        return .result()
+    }
+}
+
 /// Routes intent invocations to whichever engine is currently active.
 /// App targets set `engineProvider` at launch.
 @MainActor
@@ -43,6 +57,10 @@ public final class WorkoutIntentBridge {
     func togglePause() {
         guard let engine = engineProvider?() else { return }
         engine.submit(engine.state.phase == .paused ? .resume : .pause)
+    }
+
+    func completeCurrentSet() {
+        engineProvider?()?.completeCurrentSet()
     }
 }
 #endif

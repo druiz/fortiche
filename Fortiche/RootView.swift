@@ -3,6 +3,10 @@ import SwiftData
 import FortichePack
 
 struct RootView: View {
+    @Environment(\.modelContext) private var modelContext
+    @State private var workoutController = PhoneWorkoutController.shared
+    @State private var mirror = MirroringReceiver.shared
+
     var body: some View {
         TabView {
             Tab("Programs", systemImage: "list.bullet.rectangle") {
@@ -14,6 +18,19 @@ struct RootView: View {
             Tab("Settings", systemImage: "gearshape") {
                 SettingsPlaceholderView()
             }
+        }
+        .fullScreenCover(isPresented: Binding(
+            get: { workoutController.isActive || mirror.isActive },
+            set: { if !$0 { /* dismissal handled by End flow */ } }
+        )) {
+            LiveWorkoutView(controller: workoutController.isActive ? workoutController : mirror)
+        }
+        .task {
+            workoutController.recoverIfNeeded()
+            if !ProcessInfo.processInfo.arguments.contains("--skip-health") {
+                await mirror.requestAuthorization()
+            }
+            pushTemplatesToWatch(modelContext)
         }
     }
 }
@@ -51,6 +68,8 @@ struct TemplateListView: View {
                         }
                         .onDelete { offsets in
                             for offset in offsets { modelContext.delete(templates[offset]) }
+                            try? modelContext.save()
+                            pushTemplatesToWatch(modelContext)
                         }
                     }
                 }
@@ -94,8 +113,16 @@ struct TemplateListView: View {
         guard let program = try? await parser.parse(
             sample, suggestedName: "Demo PPL", defaultUnit: .kilograms, onDay: { _ in }
         ) else { return }
-        modelContext.insert(program.canonicalized().makeTemplate(sourceText: sample))
+        let template = program.canonicalized().makeTemplate(sourceText: sample)
+        modelContext.insert(template)
         try? modelContext.save()
+        pushTemplatesToWatch(modelContext)
+
+        // `--demo-workout` additionally starts the first day (headless UI check).
+        if ProcessInfo.processInfo.arguments.contains("--demo-workout"),
+           let firstDay = template.orderedDays.first {
+            await PhoneWorkoutController.shared.start(day: firstDay)
+        }
     }
 }
 
@@ -115,6 +142,14 @@ struct TemplateDetailView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
+                    Button {
+                        Task { await PhoneWorkoutController.shared.start(day: day) }
+                    } label: {
+                        Label("Start \(day.name)", systemImage: "play.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(PhoneWorkoutController.shared.isActive)
                 }
             }
         }
@@ -152,26 +187,19 @@ struct HistoryPlaceholderView: View {
 }
 
 struct SettingsPlaceholderView: View {
-    @ObservedObject private var mirroring = MirroringReceiver.shared
+    @AppStorage(WeightUnit.preferenceKey) private var unitRaw = WeightUnit.default().rawValue
 
     var body: some View {
         NavigationStack {
             List {
-                Section("Mirroring spike (M1.5)") {
-                    if mirroring.events.isEmpty {
-                        Text("Waiting for a workout to start on the watch…")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(Array(mirroring.events.enumerated()), id: \.offset) { _, event in
-                            Text(event).font(.caption.monospaced())
-                        }
+                Section("Units") {
+                    Picker("Weight", selection: $unitRaw) {
+                        Text("Kilograms (kg)").tag(WeightUnit.kilograms.rawValue)
+                        Text("Pounds (lb)").tag(WeightUnit.pounds.rawValue)
                     }
                 }
             }
             .navigationTitle("Settings")
-            .task {
-                await mirroring.requestAuthorization()
-            }
         }
     }
 }

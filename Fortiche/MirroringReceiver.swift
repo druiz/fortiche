@@ -1,96 +1,152 @@
 import ActivityKit
 import Foundation
 import HealthKit
+import Observation
+import SwiftData
 import FortichePack
 import os
 
-/// Receives the workout session mirrored from the watch.
+/// Phone-side client for a watch-authoritative workout.
 ///
-/// The system launches this app in the *background* when the watch calls
-/// `startMirroringToCompanionDevice` and delivers the session immediately —
-/// so `install()` must run synchronously in `ForticheApp.init`, and the Live
-/// Activity must be requested inside the handler (≈10s window after the
-/// background launch).
-@MainActor
-final class MirroringReceiver: NSObject, ObservableObject {
+/// Receives the mirrored `HKWorkoutSession`, runs a *peer* engine (optimistic
+/// local application of edits, reconciled against watch snapshots), starts the
+/// Live Activity inside the mirroring handler's background-launch window, and
+/// ingests finished workouts arriving over either channel.
+///
+/// `install()` must run synchronously in the App initializer — the system
+/// launches the app in the background when the watch starts mirroring, and a
+/// lazily installed handler silently drops the session.
+@Observable @MainActor
+final class MirroringReceiver: NSObject {
     static let shared = MirroringReceiver()
 
     private static let logger = Logger(subsystem: "com.davidruiz.fortiche", category: "mirroring")
 
-    let healthStore = HKHealthStore()
-    @Published private(set) var events: [String] = []
-    @Published private(set) var sessionState: HKWorkoutSessionState?
+    @ObservationIgnored let healthStore = HKHealthStore()
+    private(set) var engine: ActiveWorkoutEngine?
+    var isActive: Bool { engine != nil }
 
-    private var session: HKWorkoutSession?
+    @ObservationIgnored private var session: HKWorkoutSession?
+    @ObservationIgnored var modelContainer: ModelContainer?
 
-    /// Must be called synchronously from the App initializer.
+    // MARK: Install (synchronously at launch)
+
     nonisolated func install() {
         healthStore.workoutSessionMirroringStartHandler = { [weak self] session in
             Task { @MainActor in
                 self?.attach(to: session)
             }
         }
-    }
-
-    /// Mirrored-session delivery requires this app to hold workout
-    /// authorization of its own; request it up front.
-    func requestAuthorization() async {
-        do {
-            try await healthStore.requestAuthorization(
-                toShare: [HKObjectType.workoutType()],
-                read: [HKQuantityType(.heartRate), HKQuantityType(.activeEnergyBurned)]
-            )
-            log("health authorized")
-        } catch {
-            log("health auth failed: \(error.localizedDescription)")
+        ConnectivityHub.shared.activate()
+        ConnectivityHub.shared.onLiveMessage = { [weak self] message in
+            Task { @MainActor in self?.handle(message) }
+        }
+        ConnectivityHub.shared.onFinishedWorkoutReceived = { [weak self] finished in
+            Task { @MainActor in self?.ingest(finished: finished.state) }
+        }
+        ConnectivityHub.shared.onReachabilityChange = { [weak self] reachable in
+            guard reachable else { return }
+            // Ask for current state after any connection blip — cheap and
+            // idempotent; also how the phone discovers an in-flight workout.
+            Task { @MainActor in self?.send(.requestSnapshot) }
         }
     }
+
+    // MARK: Mirrored session lifecycle
 
     private func attach(to session: HKWorkoutSession) {
         self.session = session
         session.delegate = self
-        log("mirrored session received (state \(session.state.rawValue))")
+        Self.logger.info("mirrored session received")
 
-        startLiveActivity()
-
-        // Round-trip probe: watch echoes anything it receives.
-        send("ping-from-phone")
+        // Live Activity must start inside the ~10s background-launch window,
+        // with placeholder content — the first snapshot fills it in.
+        startLiveActivity(title: "Workout")
+        send(.requestSnapshot)
     }
 
-    private func startLiveActivity() {
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
-            log("live activities disabled — continuing without")
+    private func handle(_ message: SyncMessage) {
+        switch message {
+        case .snapshot(let state):
+            adopt(state)
+        case .command, .requestSnapshot:
+            break // peer side only consumes snapshots
+        }
+    }
+
+    private func adopt(_ state: WorkoutState) {
+        if state.isFinished {
+            ingest(finished: state)
+            teardown()
             return
         }
-        do {
-            _ = try Activity.request(
-                attributes: WorkoutActivityAttributes(workoutTitle: "Spike Workout"),
-                content: ActivityContent(
-                    state: WorkoutActivityAttributes.ContentState(statusText: "Connecting…"),
-                    staleDate: nil
-                )
-            )
-            log("live activity started")
-        } catch {
-            log("live activity failed: \(error.localizedDescription)")
-        }
-    }
-
-    private func send(_ message: String) {
-        guard let session else { return }
-        Task {
-            do {
-                try await session.sendToRemoteWorkoutSession(data: Data(message.utf8))
-                await self.log("sent: \(message)")
-            } catch {
-                await self.log("send failed: \(error.localizedDescription)")
+        if let engine {
+            if !engine.adopt(snapshot: state) {
+                Self.logger.info("ignored stale snapshot")
             }
+        } else {
+            let engine = ActiveWorkoutEngine(state: state, localHost: .phone, journalURL: nil)
+            engine.onLocalCommand = { [weak self] envelope in
+                self?.send(.command(envelope))
+            }
+            engine.onStateChange = { [weak self] state in
+                self?.updateLiveActivity(with: state)
+            }
+            self.engine = engine
+            updateLiveActivity(with: state)
         }
     }
 
-    private func updateActivity(_ text: String) {
-        // Activity isn't Sendable, so look it up inside the task's own region
-        // instead of holding a reference across actors.
+    private func teardown() {
+        Task { await endLiveActivity() }
+        engine = nil
+        session = nil
+    }
+
+    // MARK: Finished workouts (either channel; idempotent by UUID)
+
+    private func ingest(finished state: WorkoutState) {
+        guard let context = modelContainer.map({ ModelContext($0) }) else { return }
+        let log = state.makeLog()
+        let uuid = log.uuid
+        let existing = (try? context.fetch(FetchDescriptor<WorkoutLog>(predicate: #Predicate { $0.uuid == uuid }))) ?? []
+        existing.forEach { context.delete($0) }
+        context.insert(log)
+        try? context.save()
+        Self.logger.info("ingested finished workout \(uuid, privacy: .public)")
+    }
+
+    // MARK: Sending
+
+    private func send(_ message: SyncMessage) {
+        if let session, let data = try? message.encoded() {
+            session.sendToRemoteWorkoutSession(data: data) { _, _ in }
+        }
+        ConnectivityHub.shared.sendLive(message)
+    }
+
+    // MARK: Live Activity
+
+    private func startLiveActivity(title: String) {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        guard Activity<WorkoutActivityAttributes>.activities.isEmpty else { return }
+        _ = try? Activity.request(
+            attributes: WorkoutActivityAttributes(workoutTitle: title),
+            content: ActivityContent(
+                state: WorkoutActivityAttributes.ContentState(statusText: "Connecting to watch…"),
+                staleDate: nil
+            )
+        )
+    }
+
+    private func updateLiveActivity(with state: WorkoutState) {
+        let text: String
+        if case .resting(let until) = state.phase {
+            text = "Rest until \(until.formatted(date: .omitted, time: .standard))"
+        } else {
+            let exercise = state.currentExercise
+            text = "\(exercise?.name ?? "—") · set \((exercise?.currentSetIndex ?? 0) + 1)/\(exercise?.sets.count ?? 0)"
+        }
         let content = ActivityContent(
             state: WorkoutActivityAttributes.ContentState(statusText: text),
             staleDate: nil as Date?
@@ -102,51 +158,45 @@ final class MirroringReceiver: NSObject, ObservableObject {
         }
     }
 
-    private func log(_ message: String) {
-        Self.logger.info("\(message, privacy: .public)")
-        events.append(message)
+    private func endLiveActivity() async {
+        for activity in Activity<WorkoutActivityAttributes>.activities {
+            await activity.end(nil, dismissalPolicy: .immediate)
+        }
+    }
+
+    // MARK: Health authorization (mirrored delivery requires it)
+
+    func requestAuthorization() async {
+        _ = try? await healthStore.requestAuthorization(
+            toShare: [HKObjectType.workoutType()],
+            read: [HKQuantityType(.heartRate), HKQuantityType(.bodyMass)]
+        )
     }
 }
 
 extension MirroringReceiver: HKWorkoutSessionDelegate {
-    nonisolated func workoutSession(
-        _ workoutSession: HKWorkoutSession,
-        didChangeTo toState: HKWorkoutSessionState,
-        from fromState: HKWorkoutSessionState,
-        date: Date
-    ) {
-        Task { @MainActor in
-            sessionState = toState
-            log("state \(fromState.rawValue) → \(toState.rawValue)")
-            updateActivity("Session state: \(toState.rawValue)")
-        }
-    }
+    nonisolated func workoutSession(_ workoutSession: HKWorkoutSession, didChangeTo toState: HKWorkoutSessionState, from fromState: HKWorkoutSessionState, date: Date) {}
 
     nonisolated func workoutSession(_ workoutSession: HKWorkoutSession, didFailWithError error: Error) {
         Task { @MainActor in
-            log("session error: \(error.localizedDescription)")
+            Self.logger.error("mirrored session error: \(error.localizedDescription, privacy: .public)")
         }
     }
 
-    nonisolated func workoutSession(
-        _ workoutSession: HKWorkoutSession,
-        didReceiveDataFromRemoteWorkoutSession data: [Data]
-    ) {
+    nonisolated func workoutSession(_ workoutSession: HKWorkoutSession, didReceiveDataFromRemoteWorkoutSession data: [Data]) {
         Task { @MainActor in
             for item in data {
-                let message = String(decoding: item, as: UTF8.self)
-                log("received: \(message)")
-                updateActivity(message)
+                if let message = try? SyncMessage.decode(item) { self.handle(message) }
             }
         }
     }
 
-    nonisolated func workoutSession(
-        _ workoutSession: HKWorkoutSession,
-        didDisconnectFromRemoteDeviceWithError error: Error?
-    ) {
+    nonisolated func workoutSession(_ workoutSession: HKWorkoutSession, didDisconnectFromRemoteDeviceWithError error: Error?) {
         Task { @MainActor in
-            log("remote disconnected: \(error?.localizedDescription ?? "clean")")
+            Self.logger.info("watch disconnected: \(error?.localizedDescription ?? "clean", privacy: .public)")
+            // Keep the engine (optimistic edits are rejected with UI feedback
+            // while disconnected); a fresh snapshot re-syncs on reconnect.
+            self.send(.requestSnapshot)
         }
     }
 }

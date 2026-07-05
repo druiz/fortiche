@@ -16,6 +16,7 @@ struct ForticheApp: App {
         } catch {
             fatalError("Unable to open the Fortiche data store: \(error)")
         }
+        MirroringReceiver.shared.modelContainer = container
     }
 
     var body: some Scene {
@@ -24,4 +25,13 @@ struct ForticheApp: App {
         }
         .modelContainer(container)
     }
+}
+
+/// Push the full template catalog to the watch. Called after any template
+/// mutation and once per launch (applicationContext delivers the latest
+/// version whenever the watch next runs).
+@MainActor
+func pushTemplatesToWatch(_ context: ModelContext) {
+    let templates = (try? context.fetch(FetchDescriptor<WorkoutTemplate>())) ?? []
+    ConnectivityHub.shared.pushTemplates(templates.map(TemplateDTO.init))
 }

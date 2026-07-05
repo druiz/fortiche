@@ -123,6 +123,7 @@ struct TemplateImportView: View {
         let template = program.makeTemplate(sourceText: model.sourceText)
         modelContext.insert(template)
         try? modelContext.save()
+        pushTemplatesToWatch(modelContext)
         dismiss()
     }
 }

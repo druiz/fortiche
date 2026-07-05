@@ -178,7 +178,9 @@ extension ParsedDay {
                 guard !exercise.name.isEmpty else { return nil }
                 return ParsedExercise(
                     name: exercise.name,
-                    restSeconds: exercise.restSeconds,
+                    // The model sometimes emits 0 for "not specified" — treat as
+                    // unset so the sensible default applies downstream.
+                    restSeconds: (exercise.restSeconds ?? 0) > 0 ? exercise.restSeconds : nil,
                     sets: exercise.setGroups.flatMap { group -> [ParsedSet] in
                         var weightKg: Double?
                         var percent: Double?

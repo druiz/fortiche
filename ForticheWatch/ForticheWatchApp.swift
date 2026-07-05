@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import FortichePack
+import os
 
 @main
 struct ForticheWatchApp: App {
@@ -8,11 +9,13 @@ struct ForticheWatchApp: App {
 
     init() {
         do {
-            // Watch store is local-only; templates sync over WatchConnectivity.
+            // Watch store is local-only; templates arrive over WatchConnectivity.
             container = try ForticheStore.container(.watch)
         } catch {
             fatalError("Unable to open the Fortiche data store: \(error)")
         }
+        ConnectivityHub.shared.activate()
+        installTemplateReceiver()
     }
 
     var body: some Scene {
@@ -21,51 +24,90 @@ struct ForticheWatchApp: App {
         }
         .modelContainer(container)
     }
+
+    /// Upsert template catalog pushes from the phone into the local store.
+    private func installTemplateReceiver() {
+        let container = self.container
+        ConnectivityHub.shared.onTemplatesReceived = { templates in
+            Task { @MainActor in
+                // The phone pushes its complete catalog — replace wholesale.
+                let context = container.mainContext
+                let existing = (try? context.fetch(FetchDescriptor<WorkoutTemplate>())) ?? []
+                existing.forEach { context.delete($0) }
+                templates.forEach { context.insert($0.makeTemplate()) }
+                try? context.save()
+            }
+        }
+    }
 }
 
 struct WatchRootView: View {
     @Query(sort: \WorkoutTemplate.createdAt, order: .reverse) private var templates: [WorkoutTemplate]
-    @StateObject private var spike = SpikeWorkoutController()
+    @State private var controller = WatchWorkoutController.shared
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    if spike.isRunning {
-                        Button("End Spike", role: .destructive) { spike.end() }
-                    } else {
-                        Button("Start Spike") {
-                            Task { await spike.start() }
-                        }
-                    }
-                    ForEach(Array(spike.events.suffix(6).enumerated()), id: \.offset) { _, event in
-                        Text(event).font(.footnote)
-                    }
-                } header: {
-                    Text("Mirroring spike")
-                }
-
-                Section {
-                    if templates.isEmpty {
-                        Text("Add a program on your iPhone to get started.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(templates) { template in
-                            Text(template.name)
-                        }
-                    }
-                } header: {
-                    Text("Programs")
-                }
+            if controller.isActive {
+                WatchLiveWorkoutView(controller: controller)
+            } else {
+                dayList
             }
-            .navigationTitle("Fortiche")
-            .task {
-                // CLI automation hook: `simctl launch … --spike-autostart`
-                if ProcessInfo.processInfo.arguments.contains("--spike-autostart"), !spike.isRunning {
-                    await spike.start()
+        }
+        .task {
+            controller.recoverIfNeeded()
+        }
+        .task(id: templates.count) {
+            // CLI automation hook: start the first day of the first template.
+            let logger = Logger(subsystem: "com.davidruiz.fortiche.watch", category: "demo")
+            logger.info("demo hook: templates=\(templates.count) args=\(ProcessInfo.processInfo.arguments.joined(separator: " "), privacy: .public)")
+            if ProcessInfo.processInfo.arguments.contains("--demo-workout"),
+               !controller.isActive,
+               let day = templates.first?.orderedDays.first {
+                logger.info("demo hook: starting \(day.name, privacy: .public)")
+                await controller.start(day: day)
+                logger.info("demo hook: started, isActive=\(controller.isActive)")
+            }
+        }
+    }
+
+    private var dayList: some View {
+        List {
+            if templates.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "iphone.and.arrow.forward")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                    Text("Add a program on your iPhone to get started.")
+                        .multilineTextAlignment(.center)
+                        .font(.footnote)
+                }
+                .frame(maxWidth: .infinity)
+                .listRowBackground(Color.clear)
+            } else {
+                ForEach(templates) { template in
+                    Section(template.name) {
+                        ForEach(template.orderedDays) { day in
+                            Button {
+                                Task { await controller.start(day: day) }
+                            } label: {
+                                HStack {
+                                    VStack(alignment: .leading) {
+                                        Text(day.name).font(.headline)
+                                        Text("^[\(day.orderedExercises.count) exercise](inflect: true)")
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "play.circle.fill")
+                                        .font(.title3)
+                                        .foregroundStyle(.green)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
+        .navigationTitle("Fortiche")
     }
 }

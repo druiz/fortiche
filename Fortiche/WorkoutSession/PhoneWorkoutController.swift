@@ -74,9 +74,12 @@ final class PhoneWorkoutController {
         let log = engine.state.makeLog()
         upsert(log: log, in: modelContext)
 
-        // Save to HealthKit.
+        // Save to HealthKit with one activity per completed exercise.
         if let builder {
             do {
+                for activity in engine.state.makeHealthKitActivities() {
+                    try await builder.addWorkoutActivity(activity)
+                }
                 try await builder.endCollection(at: engine.state.endedAt ?? .now)
                 try await builder.finishWorkout()
             } catch {
@@ -154,13 +157,7 @@ final class PhoneWorkoutController {
     }
 
     private static func contentState(for state: WorkoutState) -> WorkoutActivityAttributes.ContentState {
-        // Placeholder text content; M4 turns this into structured set/rest state.
-        if case .resting(let until) = state.phase {
-            return .init(statusText: "Rest until \(until.formatted(date: .omitted, time: .standard))")
-        }
-        let exercise = state.currentExercise
-        let setNumber = (exercise?.currentSetIndex ?? 0) + 1
-        return .init(statusText: "\(exercise?.name ?? "—") · set \(setNumber)/\(exercise?.sets.count ?? 0)")
+        WorkoutActivityAttributes.ContentState(state: state, unit: .preferred)
     }
 
     // MARK: Rest notifications

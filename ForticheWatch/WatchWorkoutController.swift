@@ -90,11 +90,14 @@ final class WatchWorkoutController: NSObject {
         sendToPhone(.snapshot(state))
         ConnectivityHub.shared.queueFinishedWorkout(finished)
 
-        // Finish HealthKit.
+        // Finish HealthKit with one activity per completed exercise.
         if let builder, let session {
             session.stopActivity(with: state.endedAt ?? .now)
             session.end()
             do {
+                for activity in state.makeHealthKitActivities() {
+                    try await builder.addWorkoutActivity(activity)
+                }
                 try await builder.endCollection(at: state.endedAt ?? .now)
                 try await builder.finishWorkout()
             } catch {

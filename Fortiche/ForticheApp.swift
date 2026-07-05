@@ -17,6 +17,10 @@ struct ForticheApp: App {
             fatalError("Unable to open the Fortiche data store: \(error)")
         }
         MirroringReceiver.shared.modelContainer = container
+        // Live Activity buttons route to whichever engine is active.
+        WorkoutIntentBridge.shared.engineProvider = {
+            PhoneWorkoutController.shared.engine ?? MirroringReceiver.shared.engine
+        }
     }
 
     var body: some Scene {

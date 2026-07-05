@@ -133,22 +133,20 @@ final class MirroringReceiver: NSObject {
         _ = try? Activity.request(
             attributes: WorkoutActivityAttributes(workoutTitle: title),
             content: ActivityContent(
-                state: WorkoutActivityAttributes.ContentState(statusText: "Connecting to watch…"),
+                state: WorkoutActivityAttributes.ContentState(
+                    exerciseName: "Connecting to watch…",
+                    setNumber: 1,
+                    setCount: 0,
+                    prescription: ""
+                ),
                 staleDate: nil
             )
         )
     }
 
     private func updateLiveActivity(with state: WorkoutState) {
-        let text: String
-        if case .resting(let until) = state.phase {
-            text = "Rest until \(until.formatted(date: .omitted, time: .standard))"
-        } else {
-            let exercise = state.currentExercise
-            text = "\(exercise?.name ?? "—") · set \((exercise?.currentSetIndex ?? 0) + 1)/\(exercise?.sets.count ?? 0)"
-        }
         let content = ActivityContent(
-            state: WorkoutActivityAttributes.ContentState(statusText: text),
+            state: WorkoutActivityAttributes.ContentState(state: state, unit: .preferred),
             staleDate: nil as Date?
         )
         Task.detached {

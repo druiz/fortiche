@@ -13,7 +13,7 @@ struct RootView: View {
                 TemplateListView()
             }
             Tab("History", systemImage: "clock") {
-                HistoryPlaceholderView()
+                HistoryView()
             }
             Tab("Settings", systemImage: "gearshape") {
                 SettingsPlaceholderView()
@@ -170,19 +170,6 @@ struct TemplateDetailView: View {
         }
         text += " · rest \(exercise.restSeconds)s"
         return text
-    }
-}
-
-struct HistoryPlaceholderView: View {
-    var body: some View {
-        NavigationStack {
-            ContentUnavailableView(
-                "No workouts yet",
-                systemImage: "figure.strengthtraining.traditional",
-                description: Text("Finished workouts will appear here and in Apple Health.")
-            )
-            .navigationTitle("History")
-        }
     }
 }
 

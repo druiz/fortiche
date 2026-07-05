@@ -21,6 +21,8 @@ struct ForticheApp: App {
         WorkoutIntentBridge.shared.engineProvider = {
             PhoneWorkoutController.shared.engine ?? MirroringReceiver.shared.engine
         }
+        // App Intents / Siri drive the workout through this coordinator.
+        WorkoutCoordinatorRegistry.current = ForticheWorkoutCoordinator(container: container)
     }
 
     var body: some Scene {

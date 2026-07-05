@@ -1,3 +1,4 @@
+import Charts
 import SwiftUI
 import SwiftData
 import FortichePack
@@ -18,6 +19,14 @@ struct HistoryView: View {
                     )
                 } else {
                     List {
+                        if logs.count >= 2 {
+                            Section("Weekly volume") {
+                                VolumeChart(logs: logs, unit: unit)
+                            }
+                        }
+                        Section("Records") {
+                            PersonalRecordsView(logs: logs, unit: unit)
+                        }
                         ForEach(logs) { log in
                             NavigationLink {
                                 WorkoutSummaryView(log: log)
@@ -48,6 +57,54 @@ struct HistoryView: View {
             parts.append(unit.format(kilograms: log.totalVolumeKg))
         }
         return parts.joined(separator: " · ")
+    }
+}
+
+struct VolumeChart: View {
+    let logs: [WorkoutLog]
+    let unit: WeightUnit
+
+    var body: some View {
+        Chart(WorkoutStats.dailyVolume(from: logs)) { point in
+            BarMark(
+                x: .value("Day", point.day, unit: .day),
+                y: .value("Volume", unit.fromKilograms(point.volumeKg))
+            )
+            .foregroundStyle(.tint)
+        }
+        .frame(height: 140)
+    }
+}
+
+struct PersonalRecordsView: View {
+    let logs: [WorkoutLog]
+    let unit: WeightUnit
+
+    private var records: [WorkoutStats.ExerciseBest] {
+        WorkoutStats.personalRecords(from: logs).values
+            .sorted { $0.bestEstimatedOneRepMaxKg > $1.bestEstimatedOneRepMaxKg }
+    }
+
+    var body: some View {
+        if records.isEmpty {
+            Text("Complete weighted sets to see records.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        } else {
+            ForEach(records.prefix(6), id: \.slugOrName) { record in
+                HStack {
+                    Text(record.slugOrName).lineLimit(1)
+                    Spacer()
+                    VStack(alignment: .trailing) {
+                        Text("\(record.bestSetReps) × \(unit.format(kilograms: record.bestSetWeightKg))")
+                            .monospacedDigit()
+                        Text("e1RM \(unit.format(kilograms: record.bestEstimatedOneRepMaxKg))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
     }
 }
 

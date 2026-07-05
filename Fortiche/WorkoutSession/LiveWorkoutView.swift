@@ -2,6 +2,14 @@ import SwiftUI
 import SwiftData
 import FortichePack
 
+/// Looks up the previous session's top set for an exercise, from history.
+struct PreviousPerformance {
+    let logs: [WorkoutLog]
+    func lastTopSet(slug: String?, name: String) -> (reps: Int, weightKg: Double?, date: Date)? {
+        WorkoutStats.lastPerformance(ofSlug: slug, name: name, before: .now, in: logs)
+    }
+}
+
 /// Phone live-workout screen. Gym-glove rules: controls live in the bottom
 /// half, one huge primary action, steppers over tiny tap targets, no
 /// swipe-only gestures.
@@ -10,6 +18,7 @@ struct LiveWorkoutView: View {
     @Environment(\.dismiss) private var dismiss
     let controller: any WorkoutHosting
     @State private var showingEndConfirmation = false
+    @Query(sort: \WorkoutLog.startedAt, order: .reverse) private var logs: [WorkoutLog]
     private let unit = WeightUnit.preferred
 
     var body: some View {
@@ -66,7 +75,8 @@ struct LiveWorkoutView: View {
                     engine: engine,
                     exerciseIndex: exerciseIndex,
                     setIndex: setIndex,
-                    unit: unit
+                    unit: unit,
+                    previous: PreviousPerformance(logs: logs)
                 )
             } else {
                 allDoneCard
@@ -157,6 +167,7 @@ struct CurrentSetCard: View {
     let exerciseIndex: Int
     let setIndex: Int
     let unit: WeightUnit
+    var previous: PreviousPerformance?
 
     private var exercise: ExerciseState { engine.state.exercises[exerciseIndex] }
     private var set: SetState { exercise.sets[setIndex] }
@@ -169,6 +180,11 @@ struct CurrentSetCard: View {
                     Text("Set \(setIndex + 1) of \(exercise.sets.count)")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                    if let ghost = ghostText {
+                        Label(ghost, systemImage: "clock.arrow.circlepath")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 Spacer()
                 Menu {
@@ -218,6 +234,12 @@ struct CurrentSetCard: View {
         if set.targetRepsMin == 0 { return "AMRAP" }
         if set.targetRepsMax > set.targetRepsMin { return "\(set.targetRepsMin)–\(set.targetRepsMax)" }
         return "\(set.targetRepsMax)"
+    }
+
+    private var ghostText: String? {
+        guard let last = previous?.lastTopSet(slug: exercise.librarySlug, name: exercise.name) else { return nil }
+        let weight = last.weightKg.map { unit.format(kilograms: $0) } ?? "BW"
+        return "Last: \(last.reps) × \(weight)"
     }
 
     private func adjustReps(_ delta: Int) {

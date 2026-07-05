@@ -16,7 +16,7 @@ struct RootView: View {
                 HistoryView()
             }
             Tab("Settings", systemImage: "gearshape") {
-                SettingsPlaceholderView()
+                SettingsView()
             }
         }
         .fullScreenCover(isPresented: Binding(
@@ -170,24 +170,6 @@ struct TemplateDetailView: View {
         }
         text += " · rest \(exercise.restSeconds)s"
         return text
-    }
-}
-
-struct SettingsPlaceholderView: View {
-    @AppStorage(WeightUnit.preferenceKey) private var unitRaw = WeightUnit.default().rawValue
-
-    var body: some View {
-        NavigationStack {
-            List {
-                Section("Units") {
-                    Picker("Weight", selection: $unitRaw) {
-                        Text("Kilograms (kg)").tag(WeightUnit.kilograms.rawValue)
-                        Text("Pounds (lb)").tag(WeightUnit.pounds.rawValue)
-                    }
-                }
-            }
-            .navigationTitle("Settings")
-        }
     }
 }
 

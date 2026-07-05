@@ -92,8 +92,11 @@ lines are invisible. Full recipes: **fortiche-diagnostics-and-tooling**.
 
 All automated tests live in `FortichePack/Tests/FortichePackTests/` (11 files,
 14 `@Suite`s, 64 tests, all passing as of 2026-07-05 — the count includes the
-2 real-model tests when the host has Apple Intelligence). Run them from the
-repo root:
+2 real-model tests when the host has Apple Intelligence). This table and
+`fortiche-build-and-env`'s known-good baseline are the two homes of the
+concrete count; drift rule: if the count grew, that's fine — the criterion is
+zero failures; if it shrank, someone deleted tests — stop and investigate.
+Run them from the repo root:
 
 ```sh
 export DEVELOPER_DIR=/Applications/Xcode-beta.app

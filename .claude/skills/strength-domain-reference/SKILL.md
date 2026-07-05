@@ -10,7 +10,8 @@ description: >
   strength training), or next-day scheduling (last-completed+1 wraparound).
   Also load it before touching TemplateSet/ParsedSet semantics, WorkoutStats,
   PlateCalculator, or ProgramSchedule, or before writing tests that assert
-  domain numbers.
+  domain numbers. (Fortiche-specific despite the generic name — the one
+  skill in this library without the fortiche- prefix, kept for continuity.)
 ---
 
 # Strength Domain Reference (Fortiche)
@@ -280,7 +281,7 @@ All claims re-verifiable read-only. Run from the repo root; prefix Swift/xcodebu
 # Epley formula, PR keying, daily volume
 grep -n "1 + Double(reps) / 30\|librarySlug ?? \|startOfDay" FortichePack/Sources/FortichePack/Stats/WorkoutStats.swift
 # Notation regexes (SxR, %, RPE, rest) in the heuristic parser
-grep -n 'x\\\\s\*\|%\|rpe\|rest' FortichePack/Sources/FortichePack/Parsing/HeuristicLineParser.swift
+grep -n "amrap\|rpe\|rest\|%" FortichePack/Sources/FortichePack/Parsing/HeuristicLineParser.swift
 # Zero-means-unset sanitation + set-group expansion
 grep -n "<= 0\|min(30" FortichePack/Sources/FortichePack/Parsing/TemplateParser.swift
 # Plate sets and bar weights
@@ -295,6 +296,6 @@ grep -rn "WorkoutState.start(" Fortiche ForticheWatch --include="*.swift"
 grep -n "% days.count" FortichePack/Sources/FortichePack/Stats/ProgramSchedule.swift
 # Default rest = 90
 grep -n "?? 90\|restSeconds: Int = 90" FortichePack/Sources/FortichePack/Parsing/ParsedProgram.swift FortichePack/Sources/FortichePack/Models/TemplateModels.swift
-# Domain tests still green (64 tests as of 2026-07)
+# Domain tests still green (all package tests must pass; count baseline: fortiche-build-and-env)
 swift test --package-path FortichePack
 ```

@@ -28,7 +28,7 @@ swift test --package-path FortichePack # unit tests (macOS host is fine for pure
 ## Status
 
 All five milestones (M1–M5) are implemented and committed. Both platforms build
-against the 27.0 SDKs; FortichePack has 44 passing unit tests. See
+against the 27.0 SDKs; FortichePack has 64 passing unit tests. See
 `docs/SPIKE-M1.5.md` for the key finding: HKWorkoutSession mirroring does not
 work between paired simulators on this beta (Rapport link absent) — real devices
 are required to exercise the production live-sync path; the WatchConnectivity

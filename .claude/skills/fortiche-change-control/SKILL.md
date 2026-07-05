@@ -141,11 +141,16 @@ on the alias table (OHP → shoulder press). Details:
 
 ### R7 — No on-watch local model
 
-watchOS 27 has `LanguageModelSession`, but `SystemLanguageModel` and
-`@Generable` are `@available(watchOS, unavailable)`. On-watch parsing is
-cloud-backed only, and that path is untested (as of 2026-07). Do not add code
-that assumes a local model on the watch; guard with availability and platform
-conditions as the existing parsing code does.
+watchOS 27 has `LanguageModelSession`, but `SystemLanguageModel` is
+`@available(watchOS, unavailable)` — there is no on-watch local model.
+On-watch parsing is cloud-backed only, and that path is untested (as of
+2026-07). Do not add code that assumes a local model on the watch; guard as
+the existing parsing code does (`#if canImport(FoundationModels) &&
+!os(watchOS)` in `FortichePack/Sources/FortichePack/Parsing/TemplateParser.swift`).
+For symbol-level availability of the rest of the framework — including
+`@Generable`, whose watchOS marking has drifted across betas — defer to the
+platform truth table in `fortiche-intelligence-reference` and trust the SDK
+interface on disk over any prose, this section included.
 
 ### R8 — Generated artifacts are never hand-edited
 
@@ -187,7 +192,7 @@ export DEVELOPER_DIR=/Applications/Xcode-beta.app
 # 1. If you touched project.yml (or added/moved/deleted target source files):
 xcodegen generate
 
-# 2. Unit tests — 64 tests in 14 suites as of 2026-07, all must pass.
+# 2. Unit tests — all must pass (count baseline + drift rule: fortiche-build-and-env).
 #    Runs on the macOS host; no simulator needed.
 swift test --package-path FortichePack
 
@@ -215,7 +220,7 @@ Checklist form:
 Conventions as visible in `git log` (verify with `git log --oneline`):
 
 - Subject: `type: summary`, lower-case type, no trailing period. Types in use:
-  `feat:`, `fix:`, `docs:`. Early history used milestone prefixes (`M1:` …
+  `feat:`, `fix:`, `docs:`, `chore:`. Early history used milestone prefixes (`M1:` …
   `M5:`) — do not resurrect those; milestones are done.
 - The summary often uses an em-dash subtitle for the headline + gist shape,
   e.g. `feat: app icon — indigo dumbbell, generated with CoreGraphics`.

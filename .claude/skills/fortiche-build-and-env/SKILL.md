@@ -6,7 +6,7 @@ description: >
   why to run `xcodegen generate`, required iOS 27.0 / watchOS 27.0 simulator
   runtimes and paired simulators, code signing via project.yml, first-build
   traps (missing new files, watch bundle-id suffix, version matching, why
-  `swift test` runs on macOS), and the full verification sequence (64/64 tests
+  `swift test` runs on macOS), and the full verification sequence (all tests
   + two green simulator builds). Load this when: a build fails on a fresh
   checkout, xcodebuild says "Fortiche.xcodeproj does not exist", a new file is
   "not in scope" / not compiling, signing settings look wrong or got reverted,
@@ -62,7 +62,7 @@ Key vocabulary, defined once:
 
 As of 2026-07 the known-good versions on the reference machine: Xcode 27.0
 (build 27A5194q), XcodeGen 2.45.4, iOS 27.0 runtime 24A5355p, watchOS 27.0
-runtime 24R5289n. Newer betas may work; these are the ones the "64/64 tests +
+runtime 24R5289n. Newer betas may work; these are the ones the "all tests +
 two green builds" baseline was verified against.
 
 ## Step 1 — Select the Xcode 27 beta (DEVELOPER_DIR, not xcode-select)
@@ -251,5 +251,5 @@ prefix with `export DEVELOPER_DIR=/Applications/Xcode-beta.app`):
 | Versions defined once in settings.base | `grep -n -e MARKETING_VERSION -e CURRENT_PROJECT_VERSION /Users/david/Code/Fortiche/project.yml` |
 | Watch bundle id `com.davidruiz.fortiche.watchkitapp` + `WKCompanionAppBundleIdentifier` | `grep -n -e watchkitapp -e WKCompanionAppBundleIdentifier /Users/david/Code/Fortiche/project.yml` |
 | Package platforms include `.macOS("26.0")` for host testing | `grep -n macOS /Users/david/Code/Fortiche/FortichePack/Package.swift` |
-| 64 tests / 14 suites, all passing | `swift test --package-path /Users/david/Code/Fortiche/FortichePack` (read the final summary line) |
+| Package test suite all passing (baseline count + drift rule in the verification sequence above) | `swift test --package-path /Users/david/Code/Fortiche/FortichePack` (read the final summary line) |
 | Both simulator builds green | Steps 2–3 of the verification sequence |

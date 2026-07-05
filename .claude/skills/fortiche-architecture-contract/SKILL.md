@@ -26,7 +26,7 @@ package (`FortichePack/`) holding models, the workout engine, parsing, sync,
 and stats. `Shared/` compiles into BOTH the app and the widget targets. The
 Xcode project is generated from `project.yml` by XcodeGen and is git-ignored.
 
-**When NOT to use this skill**
+## When NOT to use this skill
 
 - Build commands, toolchain, SDK setup → `fortiche-build-and-env`
 - Running the app, simulators, launch args, demo seeding → `fortiche-run-and-operate`
@@ -312,7 +312,7 @@ Stated plainly so nobody designs on sand:
 
 ## 8. Provenance and maintenance
 
-All claims verified against the repo on 2026-07-05 (64 package tests
+All claims verified against the repo on 2026-07-05 (all package tests
 passing). One-line re-verification commands (run from the repo root; prefix
 Swift/xcodebuild with `export DEVELOPER_DIR=/Applications/Xcode-beta.app`):
 

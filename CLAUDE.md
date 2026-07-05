@@ -25,6 +25,18 @@ xcodebuild -project Fortiche.xcodeproj -scheme ForticheWatch -destination 'gener
 swift test --package-path FortichePack # unit tests (macOS host is fine for pure-Swift logic)
 ```
 
+## Status
+
+All five milestones (M1–M5) are implemented and committed. Both platforms build
+against the 27.0 SDKs; FortichePack has 44 passing unit tests. See
+`docs/SPIKE-M1.5.md` for the key finding: HKWorkoutSession mirroring does not
+work between paired simulators on this beta (Rapport link absent) — real devices
+are required to exercise the production live-sync path; the WatchConnectivity
+debug transport covers the simulator dev loop.
+
+Headless demo launch args (skip permission sheets, seed data): `--demo-import`,
+`--demo-workout`, `--skip-health`.
+
 ## Rules
 
 - Weights are stored in **kilograms** everywhere; convert only at display/input via `WeightUnit`.

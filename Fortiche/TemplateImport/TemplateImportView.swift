@@ -92,6 +92,8 @@ struct TemplateImportView: View {
         .allowsHitTesting(false)
     }
 
+    /// Sets expectations before parsing: Apple Intelligence on-device, model
+    /// still downloading, or the regex fallback with its stricter format.
     @ViewBuilder private var availabilityFooter: some View {
         switch model.availability {
         case .available:
@@ -103,6 +105,8 @@ struct TemplateImportView: View {
         }
     }
 
+    /// Streaming progress: parsed days appear as the model emits them, so long
+    /// programs show life instead of a bare spinner.
     private var parsingProgress: some View {
         List {
             Section {
@@ -127,6 +131,9 @@ struct TemplateImportView: View {
         }
     }
 
+    /// Update-in-place when this session is editing an existing template
+    /// (preserves its UUID and therefore its workout-log links), insert
+    /// otherwise. Either way the watch catalog is re-pushed.
     private func save() {
         let program = model.finalizedProgram()
         if let uuid = model.editingUUID,

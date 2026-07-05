@@ -56,6 +56,15 @@ public struct WorkoutState: Codable, Sendable, Equatable {
 
     public var isFinished: Bool { phase == .ended }
 
+    /// Workouts shorter than this are treated as accidental starts and are
+    /// discarded rather than saved (no log, no HealthKit sample).
+    public static let minimumSaveDuration: TimeInterval = 3 * 60
+
+    /// Whether this workout ran long enough to be worth keeping.
+    public var qualifiesForSaving: Bool {
+        (endedAt ?? .now).timeIntervalSince(startedAt) >= Self.minimumSaveDuration
+    }
+
     /// Overall progress across all planned sets (for progress rings).
     public var completedSetCount: Int { exercises.flatMap(\.sets).count { $0.completedAt != nil } }
     public var totalSetCount: Int { exercises.flatMap(\.sets).count }

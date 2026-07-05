@@ -19,6 +19,7 @@ public enum ProgramSchedule {
               let lastIndex = days.firstIndex(where: { $0.uuid == lastLoggedDayUUID })
         else { return days.first }
 
+        // Wrap back to day 1 after the program's last day.
         return days[(lastIndex + 1) % days.count]
     }
 

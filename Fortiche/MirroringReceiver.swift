@@ -106,6 +106,11 @@ final class MirroringReceiver: NSObject {
     // MARK: Finished workouts (either channel; idempotent by UUID)
 
     private func ingest(finished state: WorkoutState) {
+        // Same rule as the hosts: accidental sub-minimum workouts are dropped.
+        guard state.qualifiesForSaving else {
+            Self.logger.info("ignoring finished workout under minimum duration")
+            return
+        }
         guard let context = modelContainer.map({ ModelContext($0) }) else { return }
         let log = state.makeLog()
         let uuid = log.uuid

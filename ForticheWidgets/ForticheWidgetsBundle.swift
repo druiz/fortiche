@@ -3,6 +3,8 @@ import FortichePack
 import SwiftUI
 import WidgetKit
 
+/// Widget-extension entry point: the Home Screen widget and the live-workout
+/// activity.
 @main
 struct ForticheWidgetsBundle: WidgetBundle {
     var body: some Widget {
@@ -56,6 +58,7 @@ struct WorkoutLiveActivity: Widget {
         }
     }
 
+    /// One-line phase summary for the expanded island.
     @ViewBuilder
     private func statusLine(_ state: WorkoutActivityAttributes.ContentState) -> some View {
         if state.isPaused {
@@ -67,6 +70,9 @@ struct WorkoutLiveActivity: Widget {
         }
     }
 
+    /// Pause/resume plus one contextual primary action: skip rest while
+    /// resting, complete the set otherwise. Buttons fire App Intents against
+    /// the running engine — no app foregrounding needed.
     @ViewBuilder
     private func controls(_ state: WorkoutActivityAttributes.ContentState) -> some View {
         HStack {
@@ -90,6 +96,8 @@ struct WorkoutLiveActivity: Widget {
     }
 }
 
+/// Lock-screen face of the Live Activity: rest countdown or the current-set
+/// prescription, plus the same interactive controls as the Dynamic Island.
 struct LockScreenWorkoutView: View {
     let context: ActivityViewContext<WorkoutActivityAttributes>
 
@@ -181,6 +189,8 @@ struct NextWorkoutEntry: TimelineEntry {
     let date: Date
 }
 
+/// Static single-entry timeline — the placeholder widget has no dynamic
+/// content to refresh yet.
 struct NextWorkoutProvider: TimelineProvider {
     func placeholder(in context: Context) -> NextWorkoutEntry {
         NextWorkoutEntry(date: .now)

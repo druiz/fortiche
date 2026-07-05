@@ -3,6 +3,10 @@ import Foundation
 // Wire representation of templates for WatchConnectivity transfer
 // (the watch store never syncs via CloudKit; the phone pushes these).
 
+/// Codable snapshot of a full `WorkoutTemplate` graph. Ordered nested arrays
+/// replace the models' unordered CloudKit-style relationships; UUIDs are
+/// preserved end-to-end so logs made on the watch still reference the right
+/// template/day.
 public struct TemplateDTO: Codable, Sendable {
     public var uuid: UUID
     public var name: String
@@ -35,6 +39,7 @@ public struct TemplateDTO: Codable, Sendable {
         public var rpe: Double?
     }
 
+    /// Flatten a SwiftData template into the wire form (phone side, pre-push).
     public init(_ template: WorkoutTemplate) {
         uuid = template.uuid
         name = template.name

@@ -1,6 +1,8 @@
 import Foundation
 
 extension WeightUnit {
+    /// UserDefaults key — the same key `@AppStorage` bindings in the UI
+    /// targets observe, keeping this accessor and SwiftUI in agreement.
     public static let preferenceKey = "weightUnit"
 
     /// User's display unit, shared by app targets (`@AppStorage(WeightUnit.preferenceKey)`

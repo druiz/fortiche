@@ -3,6 +3,9 @@ import SwiftUI
 import SwiftData
 import FortichePack
 
+/// History tab: weekly volume chart, personal records, and the full workout
+/// log, newest first. Rows delete straight from the store — logs are the
+/// source of truth for stats, so removal reshapes the chart and records too.
 struct HistoryView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \WorkoutLog.startedAt, order: .reverse) private var logs: [WorkoutLog]
@@ -60,6 +63,7 @@ struct HistoryView: View {
     }
 }
 
+/// Bar chart of lifted volume per training day, in the display unit.
 struct VolumeChart: View {
     let logs: [WorkoutLog]
     let unit: WeightUnit
@@ -76,6 +80,7 @@ struct VolumeChart: View {
     }
 }
 
+/// Top lifts per exercise, ranked by estimated one-rep max (best first).
 struct PersonalRecordsView: View {
     let logs: [WorkoutLog]
     let unit: WeightUnit
@@ -108,6 +113,8 @@ struct PersonalRecordsView: View {
     }
 }
 
+/// Read-only detail for one finished workout: headline metrics
+/// (duration/sets/volume) plus every logged set per exercise.
 struct WorkoutSummaryView: View {
     let log: WorkoutLog
     private let unit = WeightUnit.preferred

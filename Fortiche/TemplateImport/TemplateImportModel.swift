@@ -38,6 +38,9 @@ final class TemplateImportModel {
 
     var isEditingExisting: Bool { editingUUID != nil }
 
+    /// Parse `sourceText` asynchronously, streaming days into `parsedDays`.
+    /// Prefers the on-device Apple Intelligence parser; falls back to the
+    /// line-format heuristic when the model isn't available.
     func parse() {
         guard !sourceText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         parsedDays = []
@@ -62,6 +65,10 @@ final class TemplateImportModel {
                 self.program = canonicalized
                 self.parsedDays = canonicalized.days
                 self.usedFallback = canonicalized.usedFallback
+                // No name typed → derive one from the structure we just parsed.
+                if self.programName.isEmpty {
+                    self.programName = ProgramNamer.suggestName(for: canonicalized.days)
+                }
                 self.phase = canonicalized.days.isEmpty
                     ? .failed("No training days found in that text. Check the format and try again.")
                     : .review
@@ -110,9 +117,11 @@ final class TemplateImportModel {
         phase = .editing
     }
 
+    /// The program as reviewed/edited, ready to persist. Days left without
+    /// exercises are dropped rather than saved empty.
     func finalizedProgram() -> ParsedProgram {
         ParsedProgram(
-            name: programName.isEmpty ? "My Program" : programName,
+            name: programName.isEmpty ? ProgramNamer.suggestName(for: parsedDays) : programName,
             days: parsedDays.filter { !$0.exercises.isEmpty },
             usedFallback: usedFallback
         )

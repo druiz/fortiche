@@ -39,8 +39,20 @@ struct LiveWorkoutView: View {
                             }
                         }
                     }
-                    .confirmationDialog("End workout?", isPresented: $showingEndConfirmation) {
-                        Button("End & Save", role: .destructive) {
+                    // Workouts under 3 minutes are discarded entirely (no log,
+                    // no HealthKit sample) — the dialog title warns which
+                    // outcome the user is choosing.
+                    .confirmationDialog(
+                        engine.state.qualifiesForSaving
+                            ? "End workout?"
+                            : "This workout is under 3 minutes and won't be saved.",
+                        isPresented: $showingEndConfirmation,
+                        titleVisibility: .visible
+                    ) {
+                        Button(
+                            engine.state.qualifiesForSaving ? "End & Save" : "Discard Workout",
+                            role: .destructive
+                        ) {
                             Task {
                                 await controller.end(in: modelContext)
                                 dismiss()
@@ -84,6 +96,8 @@ struct LiveWorkoutView: View {
         }
     }
 
+    /// The exercise the set card should show: the user's selection while it
+    /// has work left, otherwise the first unfinished exercise (nil = all done).
     private func currentExerciseIndex(_ state: WorkoutState) -> Int? {
         if let current = state.currentExercise, !current.isDone {
             return state.currentExerciseIndex
@@ -91,6 +105,8 @@ struct LiveWorkoutView: View {
         return state.exercises.firstIndex { !$0.isDone }
     }
 
+    /// Top-half overview: tap a row to jump to that exercise, swipe to
+    /// skip/unskip.
     private func exerciseProgressList(engine: ActiveWorkoutEngine) -> some View {
         List {
             ForEach(Array(engine.state.exercises.enumerated()), id: \.element.id) { index, exercise in
@@ -236,6 +252,8 @@ struct CurrentSetCard: View {
         return "\(set.targetRepsMax)"
     }
 
+    /// "Last: 8 × 80 kg" — what this exercise looked like last session, so the
+    /// user can judge today's load without leaving the card.
     private var ghostText: String? {
         guard let last = previous?.lastTopSet(slug: exercise.librarySlug, name: exercise.name) else { return nil }
         let weight = last.weightKg.map { unit.format(kilograms: $0) } ?? "BW"
@@ -247,6 +265,8 @@ struct CurrentSetCard: View {
         engine.submit(.adjustReps(exercise: exerciseIndex, set: setIndex, repsMin: target, repsMax: target))
     }
 
+    /// Steps in display units, converts back to canonical kilograms; stepping
+    /// down to zero means bodyweight (nil).
     private func adjustWeight(_ deltaDisplay: Double) {
         let current = set.weightKg.map { unit.fromKilograms($0) } ?? 0
         let next = max(0, current + deltaDisplay)
@@ -287,6 +307,7 @@ struct AdjusterView: View {
     }
 }
 
+/// Countdown strip shown above the set card while resting, with extend/skip.
 struct RestBar: View {
     let until: Date
     let engine: ActiveWorkoutEngine

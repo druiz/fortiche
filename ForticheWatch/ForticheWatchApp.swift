@@ -3,6 +3,9 @@ import SwiftData
 import FortichePack
 import os
 
+/// Watch app entry point. Opens the local-only store and wires the
+/// WatchConnectivity receiver in `init` so template pushes that arrive during
+/// a background launch aren't dropped.
 @main
 struct ForticheWatchApp: App {
     let container: ModelContainer
@@ -41,6 +44,8 @@ struct ForticheWatchApp: App {
     }
 }
 
+/// Day picker while idle; hands the whole screen to the live workout once the
+/// controller has an active session (including one recovered after a crash).
 struct WatchRootView: View {
     @Query(sort: \WorkoutTemplate.createdAt, order: .reverse) private var templates: [WorkoutTemplate]
     @Query(sort: \WorkoutLog.startedAt, order: .reverse) private var logs: [WorkoutLog]

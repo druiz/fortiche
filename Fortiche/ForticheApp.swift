@@ -17,9 +17,14 @@ struct ForticheApp: App {
             fatalError("Unable to open the Fortiche data store: \(error)")
         }
         MirroringReceiver.shared.modelContainer = container
-        // Live Activity buttons route to whichever engine is active.
+        // Live Activity buttons route to whichever engine is active. The
+        // fallback restores a phone-run workout from its journal when a button
+        // relaunches the app in the background (no UI = no normal recovery).
         WorkoutIntentBridge.shared.engineProvider = {
             PhoneWorkoutController.shared.engine ?? MirroringReceiver.shared.engine
+        }
+        WorkoutIntentBridge.shared.recoveryFallback = {
+            PhoneWorkoutController.shared.recoverIfNeeded()
         }
         // App Intents / Siri drive the workout through this coordinator.
         WorkoutCoordinatorRegistry.current = ForticheWorkoutCoordinator(container: container)

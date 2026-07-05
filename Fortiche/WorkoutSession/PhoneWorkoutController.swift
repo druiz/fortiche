@@ -69,19 +69,29 @@ final class PhoneWorkoutController {
         guard let engine else { return }
         engine.submit(.end)
 
-        // Persist the log (idempotent by workout UUID — a future watch-side
-        // duplicate upserts over this).
-        let log = engine.state.makeLog()
-        upsert(log: log, in: modelContext)
+        // Accidental starts (under the minimum duration) are discarded
+        // entirely: no log, no HealthKit workout.
+        let shouldSave = engine.state.qualifiesForSaving
+        if shouldSave {
+            // Persist the log (idempotent by workout UUID — a future
+            // watch-side duplicate upserts over this).
+            upsert(log: engine.state.makeLog(), in: modelContext)
+        } else {
+            Self.logger.info("discarding workout under minimum duration")
+        }
 
-        // Save to HealthKit with one activity per completed exercise.
+        // Finish or discard the HealthKit recording to match.
         if let builder {
             do {
-                for activity in engine.state.makeHealthKitActivities() {
-                    try await builder.addWorkoutActivity(activity)
+                if shouldSave {
+                    for activity in engine.state.makeHealthKitActivities() {
+                        try await builder.addWorkoutActivity(activity)
+                    }
+                    try await builder.endCollection(at: engine.state.endedAt ?? .now)
+                    try await builder.finishWorkout()
+                } else {
+                    builder.discardWorkout()
                 }
-                try await builder.endCollection(at: engine.state.endedAt ?? .now)
-                try await builder.finishWorkout()
             } catch {
                 Self.logger.error("HealthKit save failed: \(error.localizedDescription, privacy: .public)")
             }

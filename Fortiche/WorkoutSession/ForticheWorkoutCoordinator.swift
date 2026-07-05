@@ -12,10 +12,15 @@ final class ForticheWorkoutCoordinator: WorkoutCoordinating {
         self.container = container
     }
 
+    /// Whichever engine is live: the phone-authoritative controller, or the
+    /// peer engine mirroring a watch-run session. At most one exists at a time.
     var activeEngine: ActiveWorkoutEngine? {
         PhoneWorkoutController.shared.engine ?? MirroringReceiver.shared.engine
     }
 
+    /// Start a phone-hosted workout for a template day. Returns the spoken
+    /// confirmation, or nil (Siri reports failure) when a workout is already
+    /// running or the day no longer exists.
     func startWorkout(dayID: UUID) async -> String? {
         guard activeEngine == nil else { return nil }
         let context = container.mainContext
@@ -26,6 +31,8 @@ final class ForticheWorkoutCoordinator: WorkoutCoordinating {
         return "Starting \(name). Let's go!"
     }
 
+    /// Complete the current set (defaults fill in unspecified reps/weight) and
+    /// phrase the result for Siri in the user's display unit.
     func logCurrentSet(reps: Int?, weightKg: Double?) -> String? {
         guard let engine = activeEngine,
               let logged = engine.completeCurrentSet(reps: reps, weightKg: weightKg) else { return nil }
@@ -34,6 +41,9 @@ final class ForticheWorkoutCoordinator: WorkoutCoordinating {
         return "Logged \(logged.reps) reps\(weightText)."
     }
 
+    /// End via the active host. A phone-hosted workout saves locally; for a
+    /// mirrored watch session only `.end` is submitted — the watch is the
+    /// authority and owns persistence.
     func endWorkout() async {
         if PhoneWorkoutController.shared.isActive {
             await PhoneWorkoutController.shared.end(in: container.mainContext)

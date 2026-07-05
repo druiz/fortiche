@@ -32,6 +32,8 @@ public struct WorkoutDayEntity: IndexedEntity {
     public static let defaultQuery = WorkoutDayQuery()
 }
 
+/// Resolves day entities from the phone store. The catalog is small (a
+/// handful of programs), so every lookup just flattens all templates.
 public struct WorkoutDayQuery: EntityQuery {
     public init() {}
 
@@ -58,6 +60,8 @@ public struct WorkoutDayQuery: EntityQuery {
     }
 }
 
+/// Full enumeration lets Shortcuts offer a browsable day picker (and Siri
+/// disambiguate) without a search term.
 extension WorkoutDayQuery: EnumerableEntityQuery {
     @MainActor
     public func allEntities() async throws -> [WorkoutDayEntity] {

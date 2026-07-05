@@ -3,6 +3,8 @@ import Foundation
 import HealthKit
 
 extension WorkoutState {
+    /// Metadata key on each `HKWorkoutActivity` carrying that exercise's set
+    /// details as a JSON string (HealthKit metadata values must be scalars).
     public static let exerciseMetadataKey = "com.davidruiz.fortiche.exercise"
 
     /// One `HKWorkoutActivity` per completed exercise, so the workout's
@@ -52,10 +54,12 @@ extension WorkoutLog {
         }
     }
 
+    /// Count of logged sets across all exercises.
     public var totalSets: Int {
         orderedExercises.reduce(0) { $0 + $1.orderedSets.count }
     }
 
+    /// Wall-clock session length; nil until the workout has ended.
     public var duration: TimeInterval? {
         endedAt.map { $0.timeIntervalSince(startedAt) }
     }

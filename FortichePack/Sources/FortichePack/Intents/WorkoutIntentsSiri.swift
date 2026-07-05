@@ -91,6 +91,8 @@ public struct NextExerciseIntent: AppIntent {
 /// Lets the app target pull AppIntents metadata out of this package.
 public struct FortichePackage: AppIntentsPackage {}
 
+/// Spoken failure for intents that run before the app has registered its
+/// coordinator (e.g. cold-launch races).
 public enum IntentError: Error, CustomLocalizedStringResourceConvertible {
     case unavailable
     public var localizedStringResource: LocalizedStringResource {

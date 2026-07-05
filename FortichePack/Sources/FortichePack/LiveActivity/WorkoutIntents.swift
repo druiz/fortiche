@@ -1,6 +1,7 @@
 #if canImport(ActivityKit) && !os(macOS)
 import AppIntents
 import Foundation
+import os
 
 /// Intents behind the Live Activity's interactive buttons. `LiveActivityIntent`
 /// performs in the app's process, where `WorkoutIntentBridge` is wired to the
@@ -45,22 +46,43 @@ public struct CompleteSetIntent: LiveActivityIntent {
 
 /// Routes intent invocations to whichever engine is currently active.
 /// App targets set `engineProvider` at launch.
+///
+/// When a Live Activity button relaunches the app in the *background*, the UI
+/// (and its recovery path) never appears, so the provider may find no engine.
+/// `recoveryFallback` — also set at launch — gets a chance to restore one from
+/// the on-disk journal before the tap is dropped.
 @MainActor
 public final class WorkoutIntentBridge {
     public static let shared = WorkoutIntentBridge()
+    private static let logger = Logger(subsystem: "com.davidruiz.fortiche", category: "intents")
+
     public var engineProvider: (() -> ActiveWorkoutEngine?)?
+    public var recoveryFallback: (() -> Void)?
+
+    private func engine(for action: String) -> ActiveWorkoutEngine? {
+        if let engine = engineProvider?() { return engine }
+        Self.logger.info("\(action, privacy: .public): no engine — attempting journal recovery")
+        recoveryFallback?()
+        let recovered = engineProvider?()
+        if recovered == nil {
+            Self.logger.error("\(action, privacy: .public): dropped, no active workout")
+        }
+        return recovered
+    }
 
     func submit(_ command: WorkoutCommand) {
-        engineProvider?()?.submit(command)
+        Self.logger.info("live-activity intent: \(String(describing: command), privacy: .public)")
+        engine(for: "submit")?.submit(command)
     }
 
     func togglePause() {
-        guard let engine = engineProvider?() else { return }
+        guard let engine = engine(for: "togglePause") else { return }
         engine.submit(engine.state.phase == .paused ? .resume : .pause)
     }
 
     func completeCurrentSet() {
-        engineProvider?()?.completeCurrentSet()
+        Self.logger.info("live-activity intent: completeCurrentSet")
+        engine(for: "completeCurrentSet")?.completeCurrentSet()
     }
 }
 #endif

@@ -80,26 +80,36 @@ final class WatchWorkoutController: NSObject {
         engine.submit(.end)
         let state = engine.state
 
-        // Local log (watch store is offline-first).
-        let log = state.makeLog()
-        modelContext.insert(log)
-        try? modelContext.save()
-
-        // Ship to the phone on both channels; phone upserts by UUID.
-        let finished = FinishedWorkoutDTO(state: state)
+        // Accidental starts (under the minimum duration) are discarded:
+        // no local log, nothing queued to the phone, HealthKit discarded.
+        // The final snapshot still goes out so the phone tears down its
+        // mirror UI (its ingest applies the same duration rule).
+        let shouldSave = state.qualifiesForSaving
         sendToPhone(.snapshot(state))
-        ConnectivityHub.shared.queueFinishedWorkout(finished)
+        if shouldSave {
+            // Local log (watch store is offline-first) + queued transfer for
+            // the phone-dead case; the phone upserts by UUID.
+            modelContext.insert(state.makeLog())
+            try? modelContext.save()
+            ConnectivityHub.shared.queueFinishedWorkout(FinishedWorkoutDTO(state: state))
+        } else {
+            Self.logger.info("discarding workout under minimum duration")
+        }
 
-        // Finish HealthKit with one activity per completed exercise.
+        // Finish or discard the HealthKit recording to match.
         if let builder, let session {
             session.stopActivity(with: state.endedAt ?? .now)
             session.end()
             do {
-                for activity in state.makeHealthKitActivities() {
-                    try await builder.addWorkoutActivity(activity)
+                if shouldSave {
+                    for activity in state.makeHealthKitActivities() {
+                        try await builder.addWorkoutActivity(activity)
+                    }
+                    try await builder.endCollection(at: state.endedAt ?? .now)
+                    try await builder.finishWorkout()
+                } else {
+                    builder.discardWorkout()
                 }
-                try await builder.endCollection(at: state.endedAt ?? .now)
-                try await builder.finishWorkout()
             } catch {
                 Self.logger.error("HK save failed: \(error.localizedDescription, privacy: .public)")
             }

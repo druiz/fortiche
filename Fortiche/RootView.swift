@@ -2,6 +2,9 @@ import SwiftUI
 import SwiftData
 import FortichePack
 
+/// Top-level tab shell. Also owns the full-screen live-workout cover, which
+/// opens for either workout host: the phone-authoritative controller or the
+/// mirror of a watch-run session — whichever is active.
 struct RootView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var workoutController = PhoneWorkoutController.shared
@@ -26,15 +29,21 @@ struct RootView: View {
             LiveWorkoutView(controller: workoutController.isActive ? workoutController : mirror)
         }
         .task {
+            // Resurrect a phone workout that was killed mid-session before
+            // anything else can start a new one.
             workoutController.recoverIfNeeded()
             if !ProcessInfo.processInfo.arguments.contains("--skip-health") {
                 await mirror.requestAuthorization()
             }
+            // Re-push the catalog every launch — applicationContext only keeps
+            // the latest value, so this is cheap and self-healing.
             pushTemplatesToWatch(modelContext)
         }
     }
 }
 
+/// Programs tab: collapsible program sections with per-day start buttons and
+/// "next up" suggestions from `ProgramSchedule`.
 struct TemplateListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \WorkoutTemplate.createdAt, order: .reverse) private var templates: [WorkoutTemplate]
@@ -210,6 +219,8 @@ struct DayRow: View {
     }
 }
 
+/// Full program breakdown (every day, every prescription) with start buttons;
+/// Edit reopens the import flow pre-loaded with this template.
 struct TemplateDetailView: View {
     let template: WorkoutTemplate
     @State private var editing = false
@@ -250,6 +261,7 @@ struct TemplateDetailView: View {
         }
     }
 
+    /// One-line prescription, e.g. "3×5 @ 100 kg · rest 90s".
     private func summary(for exercise: TemplateExercise) -> String {
         let sets = exercise.orderedSets
         guard let first = sets.first else { return "No sets" }

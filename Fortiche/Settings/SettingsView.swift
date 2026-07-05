@@ -1,6 +1,9 @@
 import SwiftUI
 import FortichePack
 
+/// Settings tab: weight-unit choice, gym tools, and acknowledgements.
+/// The unit picker writes through `@AppStorage` to the same defaults key
+/// `WeightUnit.preferred` reads, so every screen picks the change up live.
 struct SettingsView: View {
     @AppStorage(WeightUnit.preferenceKey) private var unitRaw = WeightUnit.default().rawValue
 
@@ -39,6 +42,9 @@ struct SettingsView: View {
     }
 }
 
+/// "What plates do I put on the bar?" — target weight in, per-side plate
+/// breakdown out. State stays in canonical kilograms; only the steppers and
+/// labels speak the display unit.
 struct PlateCalculatorView: View {
     let unit: WeightUnit
     @State private var targetKg: Double
@@ -60,6 +66,8 @@ struct PlateCalculatorView: View {
     var body: some View {
         Form {
             Section("Target") {
+                // Step in whole display-unit increments (2.5 lb / 2.5 kg feel)
+                // even though the bound value is kilograms.
                 Stepper(value: $targetKg, in: barKg...500, step: unit.toKilograms(unit.displayStep)) {
                     Text(unit.format(kilograms: targetKg)).font(.headline)
                 }
@@ -98,6 +106,7 @@ struct PlateCalculatorView: View {
     }
 }
 
+/// Credits for bundled third-party data (the free-exercise-db dataset).
 struct LicensesView: View {
     var body: some View {
         List {

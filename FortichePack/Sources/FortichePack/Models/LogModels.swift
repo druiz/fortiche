@@ -3,6 +3,8 @@ import SwiftData
 
 // Same CloudKit-compatible rules as TemplateModels.swift.
 
+/// A finished workout as it was actually performed. Written once when the
+/// session ends (sessions under 3 minutes are discarded and never logged).
 @Model
 public final class WorkoutLog {
     /// Stable identity used for idempotent upserts — a finished workout may arrive
@@ -35,6 +37,8 @@ public final class WorkoutLog {
     public var orderedExercises: [LoggedExercise] { (exercises ?? []).sorted { $0.order < $1.order } }
 }
 
+/// One exercise within a log. `librarySlug` optionally ties it back to the
+/// bundled exercise library so history matches across renamed free-form names.
 @Model
 public final class LoggedExercise {
     public var uuid: UUID = UUID()
@@ -56,6 +60,7 @@ public final class LoggedExercise {
     public var orderedSets: [LoggedSet] { (sets ?? []).sorted { $0.order < $1.order } }
 }
 
+/// A single performed set — actuals, not prescription.
 @Model
 public final class LoggedSet {
     public var uuid: UUID = UUID()
@@ -76,6 +81,8 @@ public final class LoggedSet {
     }
 }
 
+/// Which device ran the authoritative engine for a session. The other device
+/// (if any) runs a peer engine reconciled by sequence-numbered snapshots.
 public enum WorkoutHost: String, Codable, Sendable {
     case phone
     case watch

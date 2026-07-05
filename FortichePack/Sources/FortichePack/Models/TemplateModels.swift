@@ -6,6 +6,9 @@ import SwiftData
 // relationships optional with explicit inverses, explicit `order` keys
 // because CloudKit relationships are unordered.
 
+/// A saved training program: an ordered list of days, each a list of
+/// prescribed exercises. Templates are the plan; `WorkoutLog` records the
+/// actuals.
 @Model
 public final class WorkoutTemplate {
     public var uuid: UUID = UUID()
@@ -35,6 +38,7 @@ public final class WorkoutTemplate {
     public var orderedDays: [TemplateDay] { (days ?? []).sorted { $0.order < $1.order } }
 }
 
+/// One training day within a program ("Push A", "Legs").
 @Model
 public final class TemplateDay {
     public var uuid: UUID = UUID()
@@ -54,6 +58,7 @@ public final class TemplateDay {
     public var orderedExercises: [TemplateExercise] { (exercises ?? []).sorted { $0.order < $1.order } }
 }
 
+/// An exercise prescription within a day: sets, rest, optional library match.
 @Model
 public final class TemplateExercise {
     public var uuid: UUID = UUID()
@@ -80,6 +85,8 @@ public final class TemplateExercise {
     public var orderedSets: [TemplateSet] { (sets ?? []).sorted { $0.order < $1.order } }
 }
 
+/// One prescribed set: a rep target plus at most one load spec (absolute
+/// weight, % of 1RM, or RPE).
 @Model
 public final class TemplateSet {
     public var uuid: UUID = UUID()
@@ -103,6 +110,7 @@ public final class TemplateSet {
     }
 }
 
+/// How a program's workouts are classified when exported to HealthKit.
 public enum StrengthActivityKind: String, Codable, Sendable, CaseIterable {
     /// Maps to `HKWorkoutActivityType.functionalStrengthTraining`.
     case functional

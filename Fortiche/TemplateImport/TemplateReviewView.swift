@@ -79,6 +79,7 @@ struct TemplateReviewView: View {
     }
 }
 
+/// One exercise line: name, library-match badge, and set summary.
 struct ExerciseRow: View {
     let exercise: ParsedExercise
 
@@ -143,6 +144,7 @@ struct ExerciseReviewView: View {
         }
         .navigationTitle(exercise.name)
         .navigationBarTitleDisplayMode(.inline)
+        // Edits commit on back-navigation — there is no explicit save button.
         .onDisappear { onChange(exercise) }
     }
 
@@ -154,6 +156,8 @@ struct ExerciseReviewView: View {
                 ForEach(candidates) { candidate in
                     Text(candidate.name).tag(String?.some(candidate.slug))
                 }
+                // Keep the current selection pickable even after a rename
+                // pushed it out of the candidate list.
                 if let slug = exercise.librarySlug, !candidates.contains(where: { $0.slug == slug }),
                    let current = ExerciseLibrary.shared[slug] {
                     Text(current.name).tag(String?.some(slug))
@@ -163,6 +167,8 @@ struct ExerciseReviewView: View {
     }
 }
 
+/// Reps + load steppers for one set. Load edits in the display unit (or in
+/// %-of-max when the set is percentage-based); zero weight means bodyweight.
 struct SetEditorRow: View {
     @Binding var set: ParsedSet
     let unit: WeightUnit
@@ -174,6 +180,7 @@ struct SetEditorRow: View {
                     .frame(minWidth: 70, alignment: .leading)
             }
             .onChange(of: set.repsMin) { _, newValue in
+                // Keep the rep range valid: raising the floor drags the ceiling.
                 if set.repsMax < newValue { set.repsMax = newValue }
             }
             Divider()

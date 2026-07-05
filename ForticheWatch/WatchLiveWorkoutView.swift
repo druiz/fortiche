@@ -48,11 +48,14 @@ struct WatchLiveWorkoutView: View {
         }
     }
 
+    /// Exercise for the set card: the current selection while unfinished,
+    /// else the first exercise with work left (nil = all done).
     private func activeExerciseIndex(_ state: WorkoutState) -> Int? {
         if let current = state.currentExercise, !current.isDone { return state.currentExerciseIndex }
         return state.exercises.firstIndex { !$0.isDone }
     }
 
+    /// Page 2: progress overview; tapping a row jumps the workout there.
     private func exerciseList(engine: ActiveWorkoutEngine) -> some View {
         List {
             ForEach(Array(engine.state.exercises.enumerated()), id: \.element.id) { index, exercise in
@@ -77,6 +80,8 @@ struct WatchLiveWorkoutView: View {
         .navigationTitle("Exercises")
     }
 
+    /// Page 3: session-level controls (pause/skip/end), kept off the set page
+    /// so they can't be fat-fingered mid-set.
     private func controlsPage(engine: ActiveWorkoutEngine) -> some View {
         VStack(spacing: 10) {
             if engine.state.phase == .paused {
@@ -172,10 +177,13 @@ struct WatchSetCard: View {
             crownWeight = set.weightKg.map { unit.fromKilograms($0) } ?? 0
         }
         .onChange(of: set.weightKg) { _, newValue in
+            // Engine state can change remotely (phone edit) — follow it.
             crownWeight = newValue.map { unit.fromKilograms($0) } ?? 0
         }
         .onChange(of: crownWeight) { _, newValue in
             let currentDisplay = set.weightKg.map { unit.fromKilograms($0) } ?? 0
+            // Half-step threshold breaks the feedback loop between the two
+            // onChange handlers and swallows sub-detent crown jitter.
             guard abs(newValue - currentDisplay) >= unit.displayStep / 2 else { return }
             engine.submit(.adjustWeight(
                 exercise: exerciseIndex,

@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="Fortiche/Assets.xcassets/AppIcon.appiconset/AppIcon.png" width="128" alt="Fortiche app icon">
+</p>
+
 # Fortiche
 
 A strength-training app for iPhone and Apple Watch, built exclusively on the
@@ -5,6 +9,18 @@ iOS 27 / watchOS 27 SDKs. Paste any workout program as plain text and on-device
 Apple Intelligence turns it into a structured, trackable plan.
 
 > "Fortiche" is French slang for someone who's really good at something.
+
+<p align="center">
+  <img src="AppStore/screenshots/iphone-6.9/01-programs.png" width="215" alt="Programs list with the next training day highlighted">
+  <img src="AppStore/screenshots/iphone-6.9/02-live-workout.png" width="215" alt="Live workout with one-tap set logging and last-time ghost">
+  <img src="AppStore/screenshots/iphone-6.9/03-history.png" width="215" alt="History with weekly volume chart and personal records">
+  <img src="AppStore/screenshots/iphone-6.9/04-settings.png" width="215" alt="Settings with selectable app icons and plate calculator">
+</p>
+<p align="center">
+  <img src="AppStore/screenshots/watch/01-days.png" width="180" alt="Apple Watch day list with next-up suggestion">
+  &nbsp;&nbsp;
+  <img src="AppStore/screenshots/watch/02-live-set.png" width="180" alt="Apple Watch live set card">
+</p>
 
 ## Features
 

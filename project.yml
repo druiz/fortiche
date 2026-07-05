@@ -1,0 +1,112 @@
+# Fortiche — generated Xcode project. Edit this file, then run `xcodegen generate`.
+#
+# Rename points (app is codenamed "Fortiche"): PRODUCT_NAME below, bundle ids,
+# iCloud container, app group. Everything else derives from these.
+name: Fortiche
+options:
+  bundleIdPrefix: com.davidruiz
+  deploymentTarget:
+    iOS: "27.0"
+    watchOS: "27.0"
+  createIntermediateGroups: true
+
+packages:
+  FortichePack:
+    path: FortichePack
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: 0.1.0
+    CURRENT_PROJECT_VERSION: 1
+    CODE_SIGN_STYLE: Automatic
+    # Set your team once here for device builds; simulator works without it.
+    DEVELOPMENT_TEAM: ""
+
+targets:
+  Fortiche:
+    type: application
+    platform: iOS
+    sources: [Fortiche]
+    dependencies:
+      - package: FortichePack
+      - target: ForticheWatch
+      - target: ForticheWidgets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.davidruiz.fortiche
+        TARGETED_DEVICE_FAMILY: 1
+        SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"
+    info:
+      path: Fortiche/Info.plist
+      properties:
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        NSHealthShareUsageDescription: Fortiche reads health data such as body weight and heart rate to personalize your training.
+        NSHealthUpdateUsageDescription: Fortiche saves your strength workouts to Apple Health so they count toward your rings.
+        NSSupportsLiveActivities: true
+    entitlements:
+      path: Fortiche/Fortiche.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.background-delivery: true
+        com.apple.developer.icloud-services: [CloudKit]
+        com.apple.developer.icloud-container-identifiers: [iCloud.com.davidruiz.fortiche]
+        com.apple.security.application-groups: [group.com.davidruiz.fortiche]
+        com.apple.developer.siri: true
+
+  ForticheWatch:
+    type: application
+    platform: watchOS
+    sources: [ForticheWatch]
+    dependencies:
+      - package: FortichePack
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.davidruiz.fortiche.watchkitapp
+    info:
+      path: ForticheWatch/Info.plist
+      properties:
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: com.davidruiz.fortiche
+        WKBackgroundModes: [workout-processing]
+        NSHealthShareUsageDescription: Fortiche reads heart rate during workouts to show live effort and zones.
+        NSHealthUpdateUsageDescription: Fortiche saves your strength workouts to Apple Health.
+    entitlements:
+      path: ForticheWatch/ForticheWatch.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+
+  ForticheWidgets:
+    type: app-extension
+    platform: iOS
+    sources: [ForticheWidgets]
+    dependencies:
+      - package: FortichePack
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.davidruiz.fortiche.widgets
+        SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"
+    info:
+      path: ForticheWidgets/Info.plist
+      properties:
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: ForticheWidgets/ForticheWidgets.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.davidruiz.fortiche]
+
+schemes:
+  Fortiche:
+    build:
+      targets: { Fortiche: all }
+    run:
+      config: Debug
+    test:
+      config: Debug
+  ForticheWatch:
+    build:
+      targets: { ForticheWatch: all }
+    run:
+      config: Debug

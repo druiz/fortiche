@@ -147,17 +147,42 @@ final class PhoneWorkoutController {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
         _ = try? Activity.request(
             attributes: WorkoutActivityAttributes(workoutTitle: state.title),
-            content: ActivityContent(state: Self.contentState(for: state), staleDate: nil)
+            content: Self.content(for: state)
         )
     }
 
     private func updateLiveActivity(with state: WorkoutState) {
-        let content = ActivityContent(state: Self.contentState(for: state), staleDate: nil as Date?)
+        // Self-heal: activities have been observed to vanish mid-workout on
+        // the 27 betas. If the workout is live but no activity exists,
+        // re-request instead of updating into the void.
+        guard !Activity<WorkoutActivityAttributes>.activities.isEmpty else {
+            Self.logger.info("live activity missing mid-workout — re-requesting")
+            startLiveActivity(with: state)
+            return
+        }
+        let content = Self.content(for: state)
         Task.detached {
             for activity in Activity<WorkoutActivityAttributes>.activities {
                 await activity.update(content)
             }
         }
+    }
+
+    /// Re-publish (or resurrect) the Live Activity — called when the app
+    /// returns to the foreground, since updates can't flow while suspended.
+    func refreshLiveActivity() {
+        guard let engine else { return }
+        engine.restExpired()
+        updateLiveActivity(with: engine.state)
+    }
+
+    private static func content(for state: WorkoutState) -> ActivityContent<WorkoutActivityAttributes.ContentState> {
+        // While resting, the content genuinely goes stale at the deadline
+        // (a suspended app can't flip the layout) — tell the system so it
+        // dims the activity instead of presenting it as current.
+        var staleDate: Date?
+        if case .resting(let until) = state.phase { staleDate = until }
+        return ActivityContent(state: contentState(for: state), staleDate: staleDate)
     }
 
     private func endLiveActivity() async {

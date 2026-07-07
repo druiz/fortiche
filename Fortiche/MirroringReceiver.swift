@@ -150,15 +150,32 @@ final class MirroringReceiver: NSObject {
     }
 
     private func updateLiveActivity(with state: WorkoutState) {
+        // Self-heal a vanished activity (observed on the 27 betas).
+        guard !Activity<WorkoutActivityAttributes>.activities.isEmpty else {
+            Self.logger.info("live activity missing mid-workout — re-requesting")
+            startLiveActivity(title: state.title)
+            return
+        }
+        // Resting content genuinely goes stale at the deadline — let the
+        // system dim it rather than present it as current.
+        var staleDate: Date?
+        if case .resting(let until) = state.phase { staleDate = until }
         let content = ActivityContent(
             state: WorkoutActivityAttributes.ContentState(state: state, unit: .preferred),
-            staleDate: nil as Date?
+            staleDate: staleDate
         )
         Task.detached {
             for activity in Activity<WorkoutActivityAttributes>.activities {
                 await activity.update(content)
             }
         }
+    }
+
+    /// Foreground refresh — mirrors PhoneWorkoutController.refreshLiveActivity.
+    func refreshLiveActivity() {
+        guard let engine else { return }
+        engine.restExpired()
+        updateLiveActivity(with: engine.state)
     }
 
     private func endLiveActivity() async {

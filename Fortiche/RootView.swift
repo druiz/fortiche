@@ -7,6 +7,7 @@ import FortichePack
 /// mirror of a watch-run session — whichever is active.
 struct RootView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
     @State private var workoutController = PhoneWorkoutController.shared
     @State private var mirror = MirroringReceiver.shared
     // CLI automation hook: `--tab history|settings` opens on that tab
@@ -47,6 +48,15 @@ struct RootView: View {
             // Re-push the catalog every launch — applicationContext only keeps
             // the latest value, so this is cheap and self-healing.
             pushTemplatesToWatch(modelContext)
+        }
+        // Updates can't flow to the Live Activity while the app is suspended
+        // (no push channel) — returning to the foreground normalizes an
+        // expired rest and re-publishes (or resurrects) the activity.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                workoutController.refreshLiveActivity()
+                mirror.refreshLiveActivity()
+            }
         }
     }
 }

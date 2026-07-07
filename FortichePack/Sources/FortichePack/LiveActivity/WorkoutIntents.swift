@@ -24,14 +24,26 @@ public final class WorkoutIntentBridge {
     public var recoveryFallback: (() -> Void)?
 
     private func engine(for action: String) -> ActiveWorkoutEngine? {
-        if let engine = engineProvider?() { return engine }
-        Self.logger.info("\(action, privacy: .public): no engine — attempting journal recovery")
-        recoveryFallback?()
-        let recovered = engineProvider?()
-        if recovered == nil {
-            Self.logger.error("\(action, privacy: .public): dropped, no active workout")
+        let resolved: ActiveWorkoutEngine?
+        if let engine = engineProvider?() {
+            resolved = engine
+        } else {
+            Self.logger.info("\(action, privacy: .public): no engine — attempting journal recovery")
+            recoveryFallback?()
+            resolved = engineProvider?()
         }
-        return recovered
+        guard let resolved else {
+            Self.logger.error("\(action, privacy: .public): dropped, no active workout")
+            return nil
+        }
+        // The Live Activity the user tapped may be STALE: while the app was
+        // suspended nobody flipped an expired rest back to active, so the
+        // button they see can belong to a phase that already ended. Normalize
+        // first — this also republishes fresh content via onStateChange, so
+        // every tap self-heals the activity even when the command itself
+        // turns out to be a no-op.
+        resolved.restExpired()
+        return resolved
     }
 
     public func submit(_ command: WorkoutCommand) {

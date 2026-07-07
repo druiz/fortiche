@@ -28,7 +28,12 @@ struct LiveWorkoutView: View {
                     .navigationTitle(engine.state.title)
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
+                        ToolbarItem(placement: .topBarLeading) {
+                            // Collapse into the tab-bar mini bar; the workout
+                            // keeps running. Swipe-down does the same.
+                            Button("Collapse", systemImage: "chevron.down") { dismiss() }
+                        }
+                        ToolbarItem(placement: .topBarLeading) {
                             Button("End", role: .destructive) { showingEndConfirmation = true }
                         }
                         ToolbarItem(placement: .primaryAction) {
@@ -69,7 +74,6 @@ struct LiveWorkoutView: View {
                 Color.clear.onAppear { dismiss() }
             }
         }
-        .interactiveDismissDisabled()
     }
 
     @ViewBuilder

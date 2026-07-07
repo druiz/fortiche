@@ -10,6 +10,13 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var workoutController = PhoneWorkoutController.shared
     @State private var mirror = MirroringReceiver.shared
+    /// Whether the live-workout view fills the screen (true) or is collapsed
+    /// into the tab-bar mini bar (false, workout still running).
+    @State private var workoutExpanded = false
+
+    private var activeWorkoutEngine: ActiveWorkoutEngine? {
+        workoutController.engine ?? mirror.engine
+    }
     // CLI automation hook: `--tab history|settings` opens on that tab
     // (used by the App Store screenshot script).
     @State private var selectedTab: String = {
@@ -32,11 +39,24 @@ struct RootView: View {
                 SettingsView()
             }
         }
-        .fullScreenCover(isPresented: Binding(
-            get: { workoutController.isActive || mirror.isActive },
-            set: { if !$0 { /* dismissal handled by End flow */ } }
-        )) {
+        // While a workout runs but the full view is collapsed, a compact
+        // status bar docks above the tab bar (Music mini-player pattern) —
+        // the rest of the app stays reachable mid-workout.
+        .tabViewBottomAccessory(isEnabled: activeWorkoutEngine != nil && !workoutExpanded) {
+            if let engine = activeWorkoutEngine {
+                WorkoutMiniBar(engine: engine) { workoutExpanded = true }
+            }
+        }
+        // A sheet (not fullScreenCover) so swipe-down collapses to the mini
+        // bar — the workout keeps running either way.
+        .sheet(isPresented: $workoutExpanded) {
             LiveWorkoutView(controller: workoutController.isActive ? workoutController : mirror)
+        }
+        // Auto-expand when a workout starts (including one arriving from the
+        // watch); fully retract when it ends. `--demo-collapsed` keeps it in
+        // the mini bar (screenshot automation).
+        .onChange(of: workoutController.isActive || mirror.isActive) { _, active in
+            workoutExpanded = active && !ProcessInfo.processInfo.arguments.contains("--demo-collapsed")
         }
         .task {
             // Resurrect a phone workout that was killed mid-session before

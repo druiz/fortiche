@@ -13,5 +13,23 @@
 	<true/>
 	<key>manageAppVersionAndBuildNumber</key>
 	<true/>
+	<!-- Manual signing with the local Apple Distribution cert
+	     (Scripts/asc_create_cert.py) and App Store profiles
+	     (Scripts/asc_create_profiles.py). Avoids interactive cloud signing,
+	     which broke headless uploads. Regenerate the profile names below if
+	     you re-run the profile script. -->
+	<key>signingStyle</key>
+	<string>manual</string>
+	<key>signingCertificate</key>
+	<string>Apple Distribution: David Ruiz (M9MD9VA4G3)</string>
+	<key>provisioningProfiles</key>
+	<dict>
+		<key>com.davidruiz.fortiche</key>
+		<string>Fortiche AppStore fortiche f305ac</string>
+		<key>com.davidruiz.fortiche.watchkitapp</key>
+		<string>Fortiche AppStore watchkitapp f234cf</string>
+		<key>com.davidruiz.fortiche.widgets</key>
+		<string>Fortiche AppStore widgets 9c92d8</string>
+	</dict>
 </dict>
 </plist>

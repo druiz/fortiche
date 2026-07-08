@@ -19,6 +19,10 @@ public final class ConnectivityHub: NSObject, @unchecked Sendable {
     /// Last catalog handed to `pushTemplates` — re-sent once activation
     /// completes (pushes issued before activation would otherwise be lost).
     private var _pendingTemplates: [TemplateDTO]?
+    /// Every catalog ever pushed this launch, kept so it can be re-sent when
+    /// the watch app gets installed (`sessionWatchStateDidChange`) — a context
+    /// sent before the watch app existed is not delivered to it.
+    private var _lastTemplates: [TemplateDTO]?
 
     public var onTemplatesReceived: (@Sendable ([TemplateDTO]) -> Void)? {
         get { lock.withLock { _onTemplates } }
@@ -52,6 +56,7 @@ public final class ConnectivityHub: NSObject, @unchecked Sendable {
 
     public func pushTemplates(_ templates: [TemplateDTO]) {
         guard WCSession.isSupported() else { return }
+        lock.withLock { _lastTemplates = templates }
         guard WCSession.default.activationState == .activated else {
             lock.withLock { _pendingTemplates = templates }
             return
@@ -96,15 +101,38 @@ extension ConnectivityHub: WCSessionDelegate {
             if let pending = lock.withLock({ let p = _pendingTemplates; _pendingTemplates = nil; return p }) {
                 pushTemplates(pending)
             }
+            // First activation after install: the counterpart may have set
+            // the application context before this app existed. The push
+            // callback never fires for that stored copy — read it explicitly
+            // or a fresh watch install shows an empty catalog until the
+            // phone happens to push again.
+            ingest(context: session.receivedApplicationContext)
         }
     }
 
     public func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
-        if let data = applicationContext["templates"] as? Data,
+        ingest(context: applicationContext)
+    }
+
+    private func ingest(context: [String: Any]) {
+        if let data = context["templates"] as? Data,
            let templates = try? JSONDecoder().decode([TemplateDTO].self, from: data) {
+            Self.logger.info("ingesting template catalog (\(templates.count, privacy: .public) templates)")
             onTemplatesReceived?(templates)
         }
     }
+
+    #if os(iOS)
+    /// Fires when pairing state or watch-app installation changes. A catalog
+    /// pushed before the watch app was installed is never delivered to it —
+    /// re-send the moment the app appears.
+    public func sessionWatchStateDidChange(_ session: WCSession) {
+        guard session.isPaired, session.isWatchAppInstalled,
+              let templates = lock.withLock({ _lastTemplates }) else { return }
+        Self.logger.info("watch app state changed — re-pushing template catalog")
+        pushTemplates(templates)
+    }
+    #endif
 
     public func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
         if let data = userInfo["finishedWorkout"] as? Data,

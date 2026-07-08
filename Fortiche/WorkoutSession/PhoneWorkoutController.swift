@@ -27,8 +27,23 @@ final class PhoneWorkoutController {
     // MARK: Lifecycle
 
     func start(day: TemplateDay) async {
+        await start(state: WorkoutState.start(day: day, host: .phone))
+    }
+
+    /// Ad-hoc "quick workout": a live session for a single exercise with no
+    /// template behind it.
+    func startQuickWorkout(exerciseName: String, librarySlug: String?, sets: Int, reps: Int, weightKg: Double?) async {
+        await start(state: WorkoutState.adHocStart(
+            exerciseName: exerciseName,
+            librarySlug: librarySlug,
+            sets: sets,
+            reps: reps,
+            weightKg: weightKg
+        ))
+    }
+
+    private func start(state: WorkoutState) async {
         guard engine == nil else { return }
-        let state = WorkoutState.start(day: day, host: .phone)
         beginSession(with: state)
 
         // HealthKit recording (best effort — the workout proceeds even if

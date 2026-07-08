@@ -59,37 +59,34 @@ public struct WorkoutState: Codable, Sendable, Equatable {
         set { kindRaw = newValue.rawValue }
     }
 
-    /// A finished state for a retroactive "mini workout" (quick log): every
-    /// set pre-completed, no live phases. Duration is a plausible estimate
-    /// (45s per set, at least a minute) so the HealthKit workout isn't
-    /// zero-length; `endedAt` is now.
-    public static func quickEntry(
+    /// A live "quick workout" started from an ad-hoc exercise instead of a
+    /// program day (crunches in front of the TV). It's a normal active
+    /// session — real duration, rest timer, Live Activity — just born without
+    /// a template. Sets are targets to be completed as they happen.
+    public static func adHocStart(
         exerciseName: String,
         librarySlug: String?,
         sets: Int,
         reps: Int,
         weightKg: Double?,
-        endedAt: Date = .now
+        restSeconds: Int = 60,
+        now: Date = .now
     ) -> WorkoutState {
-        let duration = max(60, Double(sets) * 45)
-        let startedAt = endedAt.addingTimeInterval(-duration)
-        let setStates = (0..<max(1, sets)).map { index in
-            var set = SetState(targetRepsMin: reps, targetRepsMax: reps, weightKg: weightKg)
-            set.actualReps = reps
-            // Spread completions across the estimated window so per-set
-            // timestamps stay plausible in History.
-            set.completedAt = startedAt.addingTimeInterval(duration * Double(index + 1) / Double(max(1, sets)))
-            return set
+        let setStates = (0..<max(1, sets)).map { _ in
+            SetState(targetRepsMin: reps, targetRepsMax: reps, weightKg: weightKg)
         }
         var state = WorkoutState(
             title: exerciseName,
             host: .phone,
-            startedAt: startedAt,
-            exercises: [ExerciseState(name: exerciseName, librarySlug: librarySlug, sets: setStates)]
+            startedAt: now,
+            exercises: [ExerciseState(
+                name: exerciseName,
+                librarySlug: librarySlug,
+                restSeconds: restSeconds,
+                sets: setStates
+            )]
         )
         state.kind = .quick
-        state.phase = .ended
-        state.endedAt = endedAt
         return state
     }
 
@@ -99,13 +96,16 @@ public struct WorkoutState: Codable, Sendable, Equatable {
 
     public var isFinished: Bool { phase == .ended }
 
-    /// Workouts shorter than this are treated as accidental starts and are
-    /// discarded rather than saved (no log, no HealthKit sample).
+    /// Workouts shorter than this with nothing logged are treated as
+    /// accidental starts and discarded rather than saved.
     public static let minimumSaveDuration: TimeInterval = 3 * 60
 
-    /// Whether this workout ran long enough to be worth keeping.
+    /// Whether this workout is worth keeping: long enough to be deliberate,
+    /// OR has at least one completed set (a 2-minute ad-hoc crunches session
+    /// is short but clearly intentional; an empty 30-second start is not).
     public var qualifiesForSaving: Bool {
-        (endedAt ?? .now).timeIntervalSince(startedAt) >= Self.minimumSaveDuration
+        completedSetCount > 0
+            || (endedAt ?? .now).timeIntervalSince(startedAt) >= Self.minimumSaveDuration
     }
 
     /// Overall progress across all planned sets (for progress rings).

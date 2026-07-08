@@ -61,17 +61,18 @@ public struct LogSetIntent: AppIntent {
     }
 }
 
-/// "Log 3 sets of 20 crunches" — records a mini workout without a session.
-public struct QuickLogIntent: AppIntent {
-    public static let title: LocalizedStringResource = "Quick Log"
+/// "Start 3 sets of 20 crunches" — begins a live mini workout, no program.
+public struct StartQuickWorkoutIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Start Quick Workout"
     public static let description = IntentDescription(
-        "Record a mini workout after the fact — no timer, no program."
+        "Start a quick workout for a single exercise — no program needed."
     )
+    public static let openAppWhenRun = true
 
     @Parameter(title: "Exercise")
     public var exercise: String
 
-    @Parameter(title: "Sets", default: 1)
+    @Parameter(title: "Sets", default: 3)
     public var sets: Int
 
     @Parameter(title: "Reps")
@@ -87,16 +88,16 @@ public struct QuickLogIntent: AppIntent {
         guard let coordinator = WorkoutCoordinatorRegistry.current else {
             throw IntentError.unavailable
         }
-        guard let message = await coordinator.quickLog(
+        guard let message = await coordinator.startQuickWorkout(
             exerciseName: exercise, sets: sets, reps: reps, weightKg: weightKg
         ) else {
-            return .result(dialog: "I couldn't log that — try naming the exercise and reps.")
+            return .result(dialog: "Couldn't start — is a workout already running?")
         }
         return .result(dialog: IntentDialog(stringLiteral: message))
     }
 
     public static var parameterSummary: some ParameterSummary {
-        Summary("Log \(\.$sets) sets of \(\.$reps) \(\.$exercise)")
+        Summary("Start \(\.$sets) sets of \(\.$reps) \(\.$exercise)")
     }
 }
 
@@ -165,13 +166,13 @@ public struct ForticheShortcuts: AppShortcutsProvider {
             systemImageName: "checkmark.circle"
         )
         AppShortcut(
-            intent: QuickLogIntent(),
+            intent: StartQuickWorkoutIntent(),
             phrases: [
-                "Quick log in \(.applicationName)",
-                "Log a mini workout in \(.applicationName)",
-                "Record a quick workout in \(.applicationName)",
+                "Quick workout in \(.applicationName)",
+                "Start a quick workout in \(.applicationName)",
+                "Start a mini workout in \(.applicationName)",
             ],
-            shortTitle: "Quick Log",
+            shortTitle: "Quick Workout",
             systemImageName: "bolt.fill"
         )
         AppShortcut(

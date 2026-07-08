@@ -2,11 +2,11 @@ import SwiftUI
 import SwiftData
 import FortichePack
 
-/// Retroactive "mini workout" entry — crunches in front of the TV, logged in
-/// two steps: pick the exercise (recents first), confirm sets × reps, done.
-/// Deliberately has no timer and no template; the reward is the record.
-struct QuickLogView: View {
-    @Environment(\.modelContext) private var modelContext
+/// Ad-hoc "quick workout" — crunches in front of the TV, started in two
+/// steps: pick the exercise (recents first), confirm sets × reps, Start.
+/// From there it's a normal live session (real duration, rest timer, Live
+/// Activity, mini bar) — just born without a program behind it.
+struct QuickWorkoutView: View {
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \WorkoutLog.startedAt, order: .reverse) private var logs: [WorkoutLog]
 
@@ -16,7 +16,6 @@ struct QuickLogView: View {
     @State private var reps = 15
     @State private var useWeight = false
     @State private var weight = 10.0
-    @State private var saved: WorkoutLog?
 
     private let unit = WeightUnit.preferred
 
@@ -28,15 +27,13 @@ struct QuickLogView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if saved != nil {
-                    successView
-                } else if let selection {
+                if let selection {
                     amountsView(selection)
                 } else {
                     pickerView
                 }
             }
-            .navigationTitle("Quick Log")
+            .navigationTitle("Quick Workout")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -136,7 +133,7 @@ struct QuickLogView: View {
         withAnimation { selection = choice }
     }
 
-    // MARK: Step 2 — amounts
+    // MARK: Step 2 — targets, then go
 
     private func amountsView(_ selection: Selection) -> some View {
         VStack(spacing: 20) {
@@ -174,12 +171,15 @@ struct QuickLogView: View {
             Spacer()
 
             Button {
-                Task { await save(selection) }
+                Task { await startWorkout(selection) }
             } label: {
-                Text("Log It — \(sets) × \(reps)\(useWeight ? " @ \(weight.formatted()) \(unit.symbol)" : "")")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
+                Label(
+                    "Start — \(sets) × \(reps)\(useWeight ? " @ \(weight.formatted()) \(unit.symbol)" : "")",
+                    systemImage: "play.fill"
+                )
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
             }
             .buttonStyle(.borderedProminent)
             .padding()
@@ -203,43 +203,21 @@ struct QuickLogView: View {
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
     }
 
-    private func save(_ selection: Selection) async {
-        let state = WorkoutState.quickEntry(
+    /// Starts the live session; RootView notices the active engine and
+    /// presents the full workout view.
+    private func startWorkout(_ selection: Selection) async {
+        await PhoneWorkoutController.shared.startQuickWorkout(
             exerciseName: selection.name,
             librarySlug: selection.librarySlug,
             sets: sets,
             reps: reps,
             weightKg: useWeight ? unit.toKilograms(weight) : nil
         )
-        let log = await QuickLogController.shared.save(state: state, in: modelContext)
-        withAnimation(.bouncy) { saved = log }
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
-        try? await Task.sleep(for: .seconds(1.6))
         dismiss()
-    }
-
-    // MARK: Done
-
-    private var successView: some View {
-        VStack(spacing: 14) {
-            Image(systemName: "checkmark.seal.fill")
-                .font(.system(size: 64))
-                .foregroundStyle(.green)
-                .symbolEffect(.bounce, value: saved)
-            Text("Logged!").font(.title2.bold())
-            if let saved {
-                Text("\(saved.title) · \(sets) × \(reps)\(useWeight ? " @ \(weight.formatted()) \(unit.symbol)" : "")")
-                    .foregroundStyle(.secondary)
-            }
-            Text("Counted in this week's volume — and in Apple Health.")
-                .font(.footnote)
-                .foregroundStyle(.tertiary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
 #Preview {
-    QuickLogView()
+    QuickWorkoutView()
         .modelContainer(try! ForticheStore.container(.inMemory))
 }

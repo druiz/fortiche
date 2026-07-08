@@ -59,11 +59,11 @@ struct RootView: View {
             workoutExpanded = active && !ProcessInfo.processInfo.arguments.contains("--demo-collapsed")
         }
         .task {
-            // `--demo-quicklog` exercises the retroactive quick-log path
-            // end-to-end (same coordinator entry Siri uses). Lives here, not
-            // on a tab view: tabs are lazy and may never appear.
-            if ProcessInfo.processInfo.arguments.contains("--demo-quicklog") {
-                _ = await WorkoutCoordinatorRegistry.current?.quickLog(
+            // `--demo-quickworkout` starts a live ad-hoc session end-to-end
+            // (same coordinator entry Siri uses). Lives here, not on a tab
+            // view: tabs are lazy and may never appear.
+            if ProcessInfo.processInfo.arguments.contains("--demo-quickworkout") {
+                _ = await WorkoutCoordinatorRegistry.current?.startQuickWorkout(
                     exerciseName: "Crunches", sets: 3, reps: 20, weightKg: nil
                 )
             }
@@ -126,8 +126,8 @@ struct TemplateListView: View {
             .navigationTitle("Programs")
             .toolbar {
                 ToolbarItemGroup(placement: .primaryAction) {
-                    // Retroactive mini-workout ("crunches in front of the TV").
-                    Button("Quick Log", systemImage: "bolt.fill") { showingQuickLog = true }
+                    // Ad-hoc mini-workout ("crunches in front of the TV").
+                    Button("Quick Workout", systemImage: "bolt.fill") { showingQuickLog = true }
                     Button("New Program", systemImage: "plus") { showingImport = true }
                 }
             }
@@ -135,7 +135,7 @@ struct TemplateListView: View {
                 TemplateImportView()
             }
             .sheet(isPresented: $showingQuickLog) {
-                QuickLogView()
+                QuickWorkoutView()
             }
             .task { await runDemoImportIfRequested() }
             .task(id: templates.count) {

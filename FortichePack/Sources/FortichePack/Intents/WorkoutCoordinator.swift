@@ -14,9 +14,10 @@ public protocol WorkoutCoordinating: AnyObject {
     func logCurrentSet(reps: Int?, weightKg: Double?) -> String?
     /// End the active workout.
     func endWorkout() async
-    /// Record a retroactive "mini workout" (no live session). Returns a short
-    /// confirmation phrase, or nil on failure.
-    func quickLog(exerciseName: String, sets: Int, reps: Int, weightKg: Double?) async -> String?
+    /// Start a live ad-hoc "quick workout" for a single exercise (no program).
+    /// Returns a short confirmation phrase, or nil on failure (e.g. a workout
+    /// is already running).
+    func startQuickWorkout(exerciseName: String, sets: Int, reps: Int, weightKg: Double?) async -> String?
 }
 
 @MainActor

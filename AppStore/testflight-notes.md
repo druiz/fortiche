@@ -21,7 +21,7 @@ Known gaps in this build:
 - Watch↔iPhone live sync over the production (HealthKit mirroring) path is
   freshly verified hardware territory — report any case where the two devices
   disagree after a disconnect/reconnect.
-- Workouts under 3 minutes are discarded by design.
+- Short workouts with no logged sets are discarded by design (a 2-minute quick workout with sets logged is kept).
 - iCloud sync of programs between iPhones is untested.
 
 Please report: parsing mistakes (send the program text!), sync divergence,

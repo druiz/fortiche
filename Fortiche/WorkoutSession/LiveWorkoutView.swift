@@ -44,7 +44,7 @@ struct LiveWorkoutView: View {
                             }
                         }
                     }
-                    // Workouts under 3 minutes are discarded entirely (no log,
+                    // Short workouts with nothing logged are discarded (no log,
                     // no HealthKit sample) — the alert makes the outcome
                     // explicit before the user commits. Saving is the normal
                     // path, so only the discard action is styled destructive.
@@ -66,7 +66,7 @@ struct LiveWorkoutView: View {
                         Text(
                             engine.state.qualifiesForSaving
                                 ? "It will be saved to History and Apple Health."
-                                : "Workouts under 3 minutes aren't saved."
+                                : "Nothing was logged yet, so it won't be saved."
                         )
                     }
             } else {

@@ -321,7 +321,7 @@ swift test --package-path FortichePack --filter EngineTests    # dedup, adopt-re
 
 ### Checklist, in order of likelihood
 
-1. **Was it under 3 minutes?** Discarded by design
+1. **Was it under 3 minutes with no completed sets?** Discarded by design (completed sets exempt a short workout — quick workouts save)
    (`WorkoutState.minimumSaveDuration`). Log line on either host:
    `discarding workout under minimum duration`. Not a bug — stop here.
 2. **Does the journal exist?** Every applied command journals full state to

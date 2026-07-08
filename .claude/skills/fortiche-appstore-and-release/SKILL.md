@@ -240,7 +240,7 @@ they are shaped that way:
   The matching usage strings live in `project.yml` under both the iOS and
   watch targets' `info.properties` (all four `NSHealth*UsageDescription`
   keys) — App Review checks these exist and match behavior.
-- **Intentional oddity pre-empted**: workouts under 3 minutes are discarded
+- **Intentional oddity pre-empted**: workouts under 3 minutes with no completed sets are discarded
   by design (accidental starts). Telling the reviewer prevents a "data loss"
   rejection.
 - **The App Privacy questionnaire answer: "Data Not Collected" across the

@@ -380,7 +380,7 @@ and the UUID upsert must still yield one History row — check after 4a–4c too
 
 | Rank | Hypothesis | Discriminating observation |
 |---|---|---|
-| 1 | Workout was under 3 minutes | Watch logs `discarding workout under minimum duration`; nothing was ever queued — rerun longer, this is by design |
+| 1 | Workout was under 3 minutes with no completed sets | Watch logs `discarding workout under minimum duration`; nothing was ever queued — rerun longer, this is by design |
 | 2 | Transfer queued but not yet delivered | No `ingested finished workout` yet; WC delivers on its own schedule — foreground the phone app, wait, re-collect logs before concluding loss |
 | 3 | Duplicate History rows | Upsert-by-UUID broke (`ingest` in `MirroringReceiver`, `upsert` in `PhoneWorkoutController`) — file it; do not hand-dedupe |
 

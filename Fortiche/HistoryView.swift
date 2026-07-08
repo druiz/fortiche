@@ -19,9 +19,9 @@ struct HistoryView: View {
                     ContentUnavailableView {
                         Label("No workouts yet", systemImage: "figure.strengthtraining.traditional")
                     } description: {
-                        Text("Finished workouts appear here and in Apple Health. Did a few sets off-program? Quick-log them.")
+                        Text("Finished workouts appear here and in Apple Health. A few sets off-program count too - start a quick workout.")
                     } actions: {
-                        Button("Quick Log", systemImage: "bolt.fill") { showingQuickLog = true }
+                        Button("Quick Workout", systemImage: "bolt.fill") { showingQuickLog = true }
                             .buttonStyle(.borderedProminent)
                     }
                 } else {
@@ -64,11 +64,11 @@ struct HistoryView: View {
             .navigationTitle("History")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Quick Log", systemImage: "bolt.fill") { showingQuickLog = true }
+                    Button("Quick Workout", systemImage: "bolt.fill") { showingQuickLog = true }
                 }
             }
             .sheet(isPresented: $showingQuickLog) {
-                QuickLogView()
+                QuickWorkoutView()
             }
         }
     }

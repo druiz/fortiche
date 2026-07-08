@@ -38,6 +38,11 @@ Apple Intelligence turns it into a structured, trackable plan.
 - **Live workouts on either device**: full iPhone-only mode, or a watch-run
   session with heart rate. During watch workouts the phone shows a live,
   editable mirror — change weight/reps/sets from whichever device is closer.
+- **Quick workouts** ⚡: crunches in front of the TV count too. Two steps —
+  pick an exercise (recents first), confirm sets × reps — and you're in a
+  real live session with rest timer and Live Activity, no program needed.
+  Short sessions with logged sets always save. Or just tell Siri:
+  "Start 3 sets of 20 crunches in Fortiche."
 - **Built for sweaty hands**: one giant action per screen, Digital Crown weight
   adjustment, Double Tap to complete a set, no fiddly gestures.
 - **Rest timer** with watch haptics, phone notifications, and a Live Activity

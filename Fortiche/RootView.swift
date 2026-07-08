@@ -59,6 +59,16 @@ struct RootView: View {
             workoutExpanded = active && !ProcessInfo.processInfo.arguments.contains("--demo-collapsed")
         }
         .task {
+            // `--demo-quicklog` exercises the retroactive quick-log path
+            // end-to-end (same coordinator entry Siri uses). Lives here, not
+            // on a tab view: tabs are lazy and may never appear.
+            if ProcessInfo.processInfo.arguments.contains("--demo-quicklog") {
+                _ = await WorkoutCoordinatorRegistry.current?.quickLog(
+                    exerciseName: "Crunches", sets: 3, reps: 20, weightKg: nil
+                )
+            }
+        }
+        .task {
             // Resurrect a phone workout that was killed mid-session before
             // anything else can start a new one.
             workoutController.recoverIfNeeded()
@@ -88,6 +98,7 @@ struct TemplateListView: View {
     @Query(sort: \WorkoutTemplate.createdAt, order: .reverse) private var templates: [WorkoutTemplate]
     @Query(sort: \WorkoutLog.startedAt, order: .reverse) private var logs: [WorkoutLog]
     @State private var showingImport = false
+    @State private var showingQuickLog = false
     /// Expansion is user-toggleable; nil = "not decided yet" (defaults open
     /// for the active program, collapsed for the rest).
     @State private var expanded: [UUID: Bool] = [:]
@@ -114,12 +125,17 @@ struct TemplateListView: View {
             }
             .navigationTitle("Programs")
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarItemGroup(placement: .primaryAction) {
+                    // Retroactive mini-workout ("crunches in front of the TV").
+                    Button("Quick Log", systemImage: "bolt.fill") { showingQuickLog = true }
                     Button("New Program", systemImage: "plus") { showingImport = true }
                 }
             }
             .sheet(isPresented: $showingImport) {
                 TemplateImportView()
+            }
+            .sheet(isPresented: $showingQuickLog) {
+                QuickLogView()
             }
             .task { await runDemoImportIfRequested() }
             .task(id: templates.count) {

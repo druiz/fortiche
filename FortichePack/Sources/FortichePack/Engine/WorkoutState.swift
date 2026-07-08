@@ -26,6 +26,10 @@ public struct WorkoutState: Codable, Sendable, Equatable {
     /// Highest command sequence number applied per origin — the reconciliation
     /// cursor for optimistic remote edits.
     public var lastAppliedSeq: [WorkoutHost.RawValue: Int]
+    /// Optional so journals and sync snapshots written before this field
+    /// existed still decode (synthesized Codable uses decodeIfPresent).
+    /// nil means `.session`.
+    public var kindRaw: String?
 
     public init(
         workoutUUID: UUID = UUID(),
@@ -48,6 +52,45 @@ public struct WorkoutState: Codable, Sendable, Equatable {
         self.exercises = exercises
         self.currentExerciseIndex = 0
         self.lastAppliedSeq = [:]
+    }
+
+    public var kind: WorkoutLogKind {
+        get { kindRaw.flatMap(WorkoutLogKind.init(rawValue:)) ?? .session }
+        set { kindRaw = newValue.rawValue }
+    }
+
+    /// A finished state for a retroactive "mini workout" (quick log): every
+    /// set pre-completed, no live phases. Duration is a plausible estimate
+    /// (45s per set, at least a minute) so the HealthKit workout isn't
+    /// zero-length; `endedAt` is now.
+    public static func quickEntry(
+        exerciseName: String,
+        librarySlug: String?,
+        sets: Int,
+        reps: Int,
+        weightKg: Double?,
+        endedAt: Date = .now
+    ) -> WorkoutState {
+        let duration = max(60, Double(sets) * 45)
+        let startedAt = endedAt.addingTimeInterval(-duration)
+        let setStates = (0..<max(1, sets)).map { index in
+            var set = SetState(targetRepsMin: reps, targetRepsMax: reps, weightKg: weightKg)
+            set.actualReps = reps
+            // Spread completions across the estimated window so per-set
+            // timestamps stay plausible in History.
+            set.completedAt = startedAt.addingTimeInterval(duration * Double(index + 1) / Double(max(1, sets)))
+            return set
+        }
+        var state = WorkoutState(
+            title: exerciseName,
+            host: .phone,
+            startedAt: startedAt,
+            exercises: [ExerciseState(name: exerciseName, librarySlug: librarySlug, sets: setStates)]
+        )
+        state.kind = .quick
+        state.phase = .ended
+        state.endedAt = endedAt
+        return state
     }
 
     public var currentExercise: ExerciseState? {
@@ -170,6 +213,7 @@ extension WorkoutState {
     public func makeLog() -> WorkoutLog {
         let log = WorkoutLog(uuid: workoutUUID, title: title, startedAt: startedAt, host: host)
         log.endedAt = endedAt
+        log.kind = kind
         log.templateUUID = templateUUID
         log.dayUUID = dayUUID
         log.exercises = exercises.enumerated().compactMap { exerciseIndex, exercise in

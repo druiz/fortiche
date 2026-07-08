@@ -9,17 +9,21 @@ import FortichePack
 struct HistoryView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \WorkoutLog.startedAt, order: .reverse) private var logs: [WorkoutLog]
+    @State private var showingQuickLog = false
     private let unit = WeightUnit.preferred
 
     var body: some View {
         NavigationStack {
             Group {
                 if logs.isEmpty {
-                    ContentUnavailableView(
-                        "No workouts yet",
-                        systemImage: "figure.strengthtraining.traditional",
-                        description: Text("Finished workouts appear here and in Apple Health.")
-                    )
+                    ContentUnavailableView {
+                        Label("No workouts yet", systemImage: "figure.strengthtraining.traditional")
+                    } description: {
+                        Text("Finished workouts appear here and in Apple Health. Did a few sets off-program? Quick-log them.")
+                    } actions: {
+                        Button("Quick Log", systemImage: "bolt.fill") { showingQuickLog = true }
+                            .buttonStyle(.borderedProminent)
+                    }
                 } else {
                     List {
                         if logs.count >= 2 {
@@ -35,7 +39,15 @@ struct HistoryView: View {
                                 WorkoutSummaryView(log: log)
                             } label: {
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(log.title).font(.headline)
+                                    HStack(spacing: 6) {
+                                        Text(log.title).font(.headline)
+                                        if log.kind == .quick {
+                                            Image(systemName: "bolt.fill")
+                                                .font(.caption)
+                                                .foregroundStyle(.yellow)
+                                                .accessibilityLabel("Quick log")
+                                        }
+                                    }
                                     Text(subtitle(for: log))
                                         .font(.subheadline)
                                         .foregroundStyle(.secondary)
@@ -50,6 +62,14 @@ struct HistoryView: View {
                 }
             }
             .navigationTitle("History")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Quick Log", systemImage: "bolt.fill") { showingQuickLog = true }
+                }
+            }
+            .sheet(isPresented: $showingQuickLog) {
+                QuickLogView()
+            }
         }
     }
 

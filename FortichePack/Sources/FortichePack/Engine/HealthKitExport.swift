@@ -46,22 +46,4 @@ extension WorkoutState {
     }
 }
 
-extension WorkoutLog {
-    /// Total lifted volume in kg (Σ reps × weight).
-    public var totalVolumeKg: Double {
-        orderedExercises.flatMap(\.orderedSets).reduce(0) { total, set in
-            total + Double(set.reps) * (set.weightKg ?? 0)
-        }
-    }
-
-    /// Count of logged sets across all exercises.
-    public var totalSets: Int {
-        orderedExercises.reduce(0) { $0 + $1.orderedSets.count }
-    }
-
-    /// Wall-clock session length; nil until the workout has ended.
-    public var duration: TimeInterval? {
-        endedAt.map { $0.timeIntervalSince(startedAt) }
-    }
-}
 #endif

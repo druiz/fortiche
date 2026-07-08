@@ -51,4 +51,22 @@ final class ForticheWorkoutCoordinator: WorkoutCoordinating {
             MirroringReceiver.shared.engine?.submit(.end)
         }
     }
+
+    /// Retroactive mini-workout (Quick Log) — no live session involved.
+    /// The exercise name is fuzzy-matched into the library when confident.
+    func quickLog(exerciseName: String, sets: Int, reps: Int, weightKg: Double?) async -> String? {
+        let name = exerciseName.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty, sets > 0, reps > 0 else { return nil }
+        let match = ExerciseMatcher.confidentMatch(for: name, in: .shared)
+        let state = WorkoutState.quickEntry(
+            exerciseName: match?.name ?? name,
+            librarySlug: match?.slug,
+            sets: sets,
+            reps: reps,
+            weightKg: weightKg
+        )
+        await QuickLogController.shared.save(state: state, in: container.mainContext)
+        let weightText = weightKg.map { " at \(WeightUnit.preferred.format(kilograms: $0))" } ?? ""
+        return "Logged \(sets) sets of \(reps) \(match?.name ?? name)\(weightText). Nice work!"
+    }
 }

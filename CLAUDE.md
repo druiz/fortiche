@@ -35,7 +35,8 @@ are required to exercise the production live-sync path; the WatchConnectivity
 debug transport covers the simulator dev loop.
 
 Headless demo launch args (skip permission sheets, seed data): `--demo-import`,
-`--demo-workout`, `--skip-health`.
+`--demo-history`, `--demo-workout`, `--demo-collapsed`, `--demo-quicklog`,
+`--skip-health`, `--tab history|settings`.
 
 ## Rules
 
